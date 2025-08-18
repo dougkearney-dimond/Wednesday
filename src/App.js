@@ -136,7 +136,7 @@ const DimondTennisApp = () => {
   // Password authentication
   const handleLogin = () => {
     const passwordValue = passwordRef.current?.value || '';
-    if (passwordValue === 'tennis2025') {
+    if (passwordValue === '2025') {
       setIsAuthenticated(true);
       if (passwordRef.current) passwordRef.current.value = '';
     } else {
