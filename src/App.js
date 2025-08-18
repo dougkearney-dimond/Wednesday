@@ -1,27 +1,29 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Calendar, Clock, Trash2, Plus, AlertCircle, ExternalLink, User } from 'lucide-react';
 
-// Airtable Configuration - TEMPORARY: Direct values for testing
-// TODO: Switch back to environment variables after testing
-const AIRTABLE_API_KEY = 'pat_your_actual_token_here'; // Replace with your actual token
-const AIRTABLE_BASE_ID = 'app_your_actual_base_id_here'; // Replace with your actual base ID
+// Airtable Configuration - Using secure environment variables
+const AIRTABLE_API_KEY = process.env.REACT_APP_AIRTABLE_API_KEY || 'placeholder_api_key';
+const AIRTABLE_BASE_ID = process.env.REACT_APP_AIRTABLE_BASE_ID || 'placeholder_base_id';
 const AIRTABLE_TABLE_NAME = 'Matches';
 
-// Debug: Log the actual values being used (but mask the API key)
+// Debug: Log the actual values being used (but mask the API key for security)
 console.log('=== AIRTABLE DEBUG INFO ===');
 console.log('Base ID:', AIRTABLE_BASE_ID);
 console.log('Table Name:', AIRTABLE_TABLE_NAME);
 console.log('API Key starts with:', AIRTABLE_API_KEY.substring(0, 8) + '...');
 console.log('Full URL:', `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${AIRTABLE_TABLE_NAME}`);
-console.log('Has API Key:', !!AIRTABLE_API_KEY && AIRTABLE_API_KEY !== 'pat_your_actual_token_here');
-console.log('Has Base ID:', !!AIRTABLE_BASE_ID && AIRTABLE_BASE_ID !== 'app_your_actual_base_id_here');
+console.log('Has API Key:', !!AIRTABLE_API_KEY && AIRTABLE_API_KEY !== 'placeholder_api_key');
+console.log('Has Base ID:', !!AIRTABLE_BASE_ID && AIRTABLE_BASE_ID !== 'placeholder_base_id');
+console.log('Environment variables loaded:', {
+  'REACT_APP_AIRTABLE_API_KEY': !!process.env.REACT_APP_AIRTABLE_API_KEY,
+  'REACT_APP_AIRTABLE_BASE_ID': !!process.env.REACT_APP_AIRTABLE_BASE_ID
+});
 
 // Test different table names
 console.log('Testing URLs:');
 console.log('1.', `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/Matches`);
 console.log('2.', `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/matches`);
 console.log('3.', `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/Table%201`);
-console.log('4.', `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/tblXXXXXXXXXXXXXX`);
 console.log('Copy one of these URLs and test it in your browser with your API token');
 console.log('===============================');
 
