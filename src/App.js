@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Calendar, Clock, Trash2, Plus, AlertCircle, ExternalLink, User } from 'lucide-react';
 
-// Airtable Configuration - Using environment variables for security
-const AIRTABLE_API_KEY = process.env.REACT_APP_AIRTABLE_API_KEY || 'your_airtable_api_key_here';
-const AIRTABLE_BASE_ID = process.env.REACT_APP_AIRTABLE_BASE_ID || 'your_base_id_here';
+// Airtable Configuration - TEMPORARY: Direct values for testing
+// TODO: Switch back to environment variables after testing
+const AIRTABLE_API_KEY = 'pat_your_actual_token_here'; // Replace with your actual token
+const AIRTABLE_BASE_ID = 'app_your_actual_base_id_here'; // Replace with your actual base ID
 const AIRTABLE_TABLE_NAME = 'Matches';
 
 // Debug: Log the actual values being used (but mask the API key)
@@ -12,8 +13,16 @@ console.log('Base ID:', AIRTABLE_BASE_ID);
 console.log('Table Name:', AIRTABLE_TABLE_NAME);
 console.log('API Key starts with:', AIRTABLE_API_KEY.substring(0, 8) + '...');
 console.log('Full URL:', `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${AIRTABLE_TABLE_NAME}`);
-console.log('Has API Key:', !!AIRTABLE_API_KEY && AIRTABLE_API_KEY !== 'your_airtable_api_key_here');
-console.log('Has Base ID:', !!AIRTABLE_BASE_ID && AIRTABLE_BASE_ID !== 'your_base_id_here');
+console.log('Has API Key:', !!AIRTABLE_API_KEY && AIRTABLE_API_KEY !== 'pat_your_actual_token_here');
+console.log('Has Base ID:', !!AIRTABLE_BASE_ID && AIRTABLE_BASE_ID !== 'app_your_actual_base_id_here');
+
+// Test different table names
+console.log('Testing URLs:');
+console.log('1.', `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/Matches`);
+console.log('2.', `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/matches`);
+console.log('3.', `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/Table%201`);
+console.log('4.', `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/tblXXXXXXXXXXXXXX`);
+console.log('Copy one of these URLs and test it in your browser with your API token');
 console.log('===============================');
 
 // Airtable API configuration
@@ -74,6 +83,30 @@ const DimondTennisApp = () => {
   useEffect(() => {
     if (!isAuthenticated) return;
 
+    // Simple auth test first
+    const testAuth = async () => {
+      try {
+        console.log('Testing Airtable authentication...');
+        const response = await fetch(`https://api.airtable.com/v0/meta/bases`, {
+          headers: {
+            'Authorization': `Bearer ${AIRTABLE_API_KEY}`
+          }
+        });
+        
+        console.log('Auth test response status:', response.status);
+        if (response.ok) {
+          console.log('✅ Authentication working!');
+        } else {
+          const errorData = await response.json();
+          console.error('❌ Authentication failed:', errorData);
+        }
+      } catch (error) {
+        console.error('Auth test error:', error);
+      }
+    };
+
+    testAuth();
+
     // Fetch matches from Airtable - moved inside useEffect to avoid dependency issues
     const fetchMatches = async () => {
       try {
@@ -83,6 +116,8 @@ const DimondTennisApp = () => {
         });
         
         if (!response.ok) {
+          const errorData = await response.json();
+          console.error('Fetch matches error:', errorData);
           throw new Error(`HTTP error! status: ${response.status}`);
         }
         
