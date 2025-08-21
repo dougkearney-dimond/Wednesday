@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Calendar, Clock, Trash2, Plus, AlertCircle, ExternalLink, User } from 'lucide-react';
+import { Calendar, Clock, Trash2, Plus, AlertCircle, ExternalLink, User, X } from 'lucide-react';
 
 // Airtable Configuration - Using secure environment variables
 const AIRTABLE_API_KEY = process.env.REACT_APP_AIRTABLE_API_KEY || 'placeholder_api_key';
@@ -38,10 +38,12 @@ const airtableUrl = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${AIRTABLE_
 const DimondTennisApp = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [currentView, setCurrentView] = useState('matches');
-  const [playerName, setPlayerName] = useState('');
   const [organizedMatches, setOrganizedMatches] = useState([]);
   const [loading, setLoading] = useState(false);
   const passwordRef = useRef(null);
+  
+  // Signup modal state
+  const [signupModal, setSignupModal] = useState({ isOpen: false, matchId: null, playerName: '' });
   
   const [newMatch, setNewMatch] = useState({
     date: '',
@@ -233,9 +235,24 @@ const DimondTennisApp = () => {
     }
   };
 
-  // Sign up for a match
-  const signUpForMatch = async (matchId) => {
-    if (!playerName.trim()) return;
+  // Open signup modal
+  const openSignupModal = (matchId) => {
+    setSignupModal({ isOpen: true, matchId, playerName: '' });
+  };
+
+  // Close signup modal
+  const closeSignupModal = () => {
+    setSignupModal({ isOpen: false, matchId: null, playerName: '' });
+  };
+
+  // Handle signup from modal
+  const handleSignupFromModal = async () => {
+    const { matchId, playerName } = signupModal;
+    
+    if (!playerName.trim()) {
+      alert('Please enter your name');
+      return;
+    }
     
     try {
       const match = organizedMatches.find(m => m.id === matchId);
@@ -256,8 +273,10 @@ const DimondTennisApp = () => {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
 
-        setPlayerName('');
+        closeSignupModal();
         await refetchMatches(); // Refresh the matches list
+      } else if (match && match.signups.includes(playerName.trim())) {
+        alert('You are already signed up for this match!');
       }
     } catch (error) {
       console.error('Error signing up:', error);
@@ -323,6 +342,83 @@ const DimondTennisApp = () => {
       console.error('Error deleting match:', error);
       alert('Error deleting match. Please try again.');
     }
+  };
+
+  // Signup Modal Component
+  const SignupModal = () => {
+    if (!signupModal.isOpen) return null;
+
+    const match = organizedMatches.find(m => m.id === signupModal.matchId);
+    if (!match) return null;
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+          {/* Modal Header */}
+          <div className="bg-black text-white p-4 rounded-t-lg">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold">Sign Up for Match</h3>
+              <button
+                onClick={closeSignupModal}
+                className="text-gray-300 hover:text-white"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <p className="text-gray-300 text-sm mt-1">
+              {formatDate(match.date)} at {match.time}
+            </p>
+          </div>
+
+          {/* Modal Body */}
+          <div className="p-6">
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Your Name
+              </label>
+              <input
+                type="text"
+                value={signupModal.playerName}
+                onChange={(e) => setSignupModal({...signupModal, playerName: e.target.value})}
+                placeholder="Enter your full name"
+                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
+                autoFocus
+                onKeyDown={(e) => e.key === 'Enter' && handleSignupFromModal()}
+              />
+            </div>
+
+            {/* Current signups preview */}
+            <div className="mb-4">
+              <p className="text-sm text-gray-600 mb-2">
+                Current signups: {match.signups.length}/8
+              </p>
+              {match.signups.length >= 8 && (
+                <p className="text-sm text-amber-600">
+                  ⚠️ This match is full. You'll be added to the waiting list.
+                </p>
+              )}
+            </div>
+
+            {/* Modal Actions */}
+            <div className="flex space-x-3">
+              <button
+                onClick={handleSignupFromModal}
+                disabled={!signupModal.playerName.trim()}
+                className="flex-1 bg-black text-white py-2 px-4 rounded-md hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+              >
+                Sign Me Up
+              </button>
+              <button
+                onClick={closeSignupModal}
+                className="flex-1 bg-gray-200 text-gray-800 py-2 px-4 rounded-md hover:bg-gray-300 font-medium"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
   };
 
   // Login form component
@@ -470,20 +566,11 @@ const DimondTennisApp = () => {
       <main className="max-w-6xl mx-auto px-4 py-6">
         {currentView === 'matches' && (
           <div>
-            {/* Quick Signup */}
+            {/* Info Section */}
             <div className="bg-white rounded-lg shadow-md p-6 mb-8">
               <div className="text-center">
-                <h2 className="text-xl font-semibold text-gray-900 mb-4">Sign Up for Matches</h2>
-                <div className="flex justify-center space-x-3 max-w-md mx-auto">
-                  <input
-                    type="text"
-                    value={playerName}
-                    onChange={(e) => setPlayerName(e.target.value)}
-                    placeholder="Enter your name"
-                    className="flex-1 px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
-                  />
-                </div>
-                <p className="text-sm text-gray-600 mt-2">Enter your name above, then click "Sign Up" for any match below</p>
+                <h2 className="text-xl font-semibold text-gray-900 mb-2">Wednesday Night Doubles</h2>
+                <p className="text-gray-600">Click "Sign Up" below to join any match. Enter your name when prompted.</p>
               </div>
             </div>
 
@@ -538,12 +625,11 @@ const DimondTennisApp = () => {
                     {/* Sign Up Button */}
                     <div className="p-4 border-b bg-gray-50">
                       <button
-                        onClick={() => signUpForMatch(match.id)}
-                        disabled={!playerName.trim() || match.signups.includes(playerName.trim())}
-                        className="w-full px-4 py-2 bg-black text-white rounded-md hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center font-medium"
+                        onClick={() => openSignupModal(match.id)}
+                        className="w-full px-4 py-2 bg-black text-white rounded-md hover:bg-gray-800 flex items-center justify-center font-medium"
                       >
                         <Plus className="h-4 w-4 mr-2" />
-                        {match.signups.includes(playerName.trim()) ? 'Already Signed Up' : 'Sign Up for This Match'}
+                        Sign Up for This Match
                       </button>
                     </div>
 
@@ -761,6 +847,9 @@ const DimondTennisApp = () => {
           </div>
         </div>
       </main>
+
+      {/* Signup Modal */}
+      <SignupModal />
     </div>
   );
 };
