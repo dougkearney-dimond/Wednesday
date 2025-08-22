@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Calendar, Clock, Trash2, Plus, AlertCircle, ExternalLink, User, X } from 'lucide-react';
+import { Calendar, Clock, Trash2, Plus, AlertCircle, ExternalLink, User, X, Archive } from 'lucide-react';
 
 // Airtable Configuration - Using secure environment variables
 const AIRTABLE_API_KEY = process.env.REACT_APP_AIRTABLE_API_KEY || 'placeholder_api_key';
@@ -39,6 +39,7 @@ const DimondTennisApp = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [currentView, setCurrentView] = useState('matches');
   const [organizedMatches, setOrganizedMatches] = useState([]);
+  const [archivedMatches, setArchivedMatches] = useState([]);
   const [loading, setLoading] = useState(false);
   const passwordRef = useRef(null);
   
@@ -50,6 +51,17 @@ const DimondTennisApp = () => {
     time: '',
     organizer: ''
   });
+
+  // Check if a match should be archived (day after it occurred)
+  const shouldArchiveMatch = (matchDate) => {
+    const today = new Date();
+    const match = new Date(matchDate);
+    const dayAfterMatch = new Date(match);
+    dayAfterMatch.setDate(match.getDate() + 1);
+    
+    // Archive if today is the day after the match or later
+    return today >= dayAfterMatch;
+  };
 
   // Generate Wednesday dates
   const generateWednesdays = () => {
@@ -135,7 +147,12 @@ const DimondTennisApp = () => {
           signups: record.fields.Signups ? record.fields.Signups.split('\n').filter(s => s.trim()) : []
         }));
         
-        setOrganizedMatches(matches);
+        // Separate current and archived matches
+        const currentMatches = matches.filter(match => !shouldArchiveMatch(match.date));
+        const pastMatches = matches.filter(match => shouldArchiveMatch(match.date));
+        
+        setOrganizedMatches(currentMatches);
+        setArchivedMatches(pastMatches);
         setLoading(false);
       } catch (error) {
         console.error('Error fetching matches:', error);
@@ -169,7 +186,12 @@ const DimondTennisApp = () => {
         signups: record.fields.Signups ? record.fields.Signups.split('\n').filter(s => s.trim()) : []
       }));
       
-      setOrganizedMatches(matches);
+      // Separate current and archived matches
+      const currentMatches = matches.filter(match => !shouldArchiveMatch(match.date));
+      const pastMatches = matches.filter(match => shouldArchiveMatch(match.date));
+      
+      setOrganizedMatches(currentMatches);
+      setArchivedMatches(pastMatches);
       setLoading(false);
     } catch (error) {
       console.error('Error fetching matches:', error);
@@ -255,7 +277,7 @@ const DimondTennisApp = () => {
     }
     
     try {
-      const match = organizedMatches.find(m => m.id === matchId);
+      const match = organizedMatches.find(m => m.id === matchId) || archivedMatches.find(m => m.id === matchId);
       if (match && !match.signups.includes(playerName.trim())) {
         const updatedSignups = [...match.signups, playerName.trim()];
         
@@ -293,7 +315,7 @@ const DimondTennisApp = () => {
     if (!isConfirmed) return;
     
     try {
-      const match = organizedMatches.find(m => m.id === matchId);
+      const match = organizedMatches.find(m => m.id === matchId) || archivedMatches.find(m => m.id === matchId);
       if (match) {
         const updatedSignups = match.signups.filter(player => player !== playerToRemove);
         
@@ -348,8 +370,10 @@ const DimondTennisApp = () => {
   const SignupModal = () => {
     if (!signupModal.isOpen) return null;
 
-    const match = organizedMatches.find(m => m.id === signupModal.matchId);
+    const match = organizedMatches.find(m => m.id === signupModal.matchId) || archivedMatches.find(m => m.id === signupModal.matchId);
     if (!match) return null;
+
+    const isArchived = shouldArchiveMatch(match.date);
 
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -392,7 +416,12 @@ const DimondTennisApp = () => {
               <p className="text-sm text-gray-600 mb-2">
                 Current signups: {match.signups.length}/8
               </p>
-              {match.signups.length >= 8 && (
+              {isArchived && (
+                <p className="text-sm text-red-600 mb-2">
+                  ⚠️ This match has already occurred and is archived.
+                </p>
+              )}
+              {!isArchived && match.signups.length >= 8 && (
                 <p className="text-sm text-amber-600">
                   ⚠️ This match is full. You'll be added to the waiting list.
                 </p>
@@ -403,10 +432,10 @@ const DimondTennisApp = () => {
             <div className="flex space-x-3">
               <button
                 onClick={handleSignupFromModal}
-                disabled={!signupModal.playerName.trim()}
+                disabled={!signupModal.playerName.trim() || isArchived}
                 className="flex-1 bg-black text-white py-2 px-4 rounded-md hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
               >
-                Sign Me Up
+                {isArchived ? 'Match Archived' : 'Sign Me Up'}
               </button>
               <button
                 onClick={closeSignupModal}
@@ -420,6 +449,137 @@ const DimondTennisApp = () => {
       </div>
     );
   };
+
+  // Match Card Component (reusable for current and archived matches)
+  const MatchCard = ({ match, isArchived = false }) => (
+    <div key={match.id} className="bg-white rounded-lg shadow-md overflow-hidden">
+      {/* Match Header */}
+      <div className={`${isArchived ? 'bg-gray-600' : 'bg-black'} text-white p-4`}>
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-lg font-semibold">
+              {formatShortDate(match.date)}
+              {isArchived && <span className="ml-2 text-xs bg-gray-800 px-2 py-1 rounded">ARCHIVED</span>}
+            </h3>
+            <p className="text-gray-300 text-sm">
+              {formatDate(match.date)}
+            </p>
+          </div>
+          <div className="text-right">
+            <div className="flex items-center text-gray-300">
+              <Clock className="h-4 w-4 mr-1" />
+              <span className="text-sm">{match.time}</span>
+            </div>
+            <div className="flex items-center text-gray-300 mt-1">
+              <User className="h-4 w-4 mr-1" />
+              <span className="text-sm">by {match.organizer}</span>
+            </div>
+            {!isArchived && (
+              <button
+                onClick={() => deleteMatch(match.id)}
+                className="mt-2 text-red-400 hover:text-red-300 text-xs"
+                title="Delete entire match"
+              >
+                Delete Match
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Sign Up Button */}
+      {!isArchived && (
+        <div className="p-4 border-b bg-gray-50">
+          <button
+            onClick={() => openSignupModal(match.id)}
+            className="w-full px-4 py-2 bg-black text-white rounded-md hover:bg-gray-800 flex items-center justify-center font-medium"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Sign Up for This Match
+          </button>
+        </div>
+      )}
+
+      {/* Players List */}
+      <div className="p-4">
+        <div className="space-y-4">
+          {/* Confirmed Players */}
+          <div>
+            <h4 className="font-medium text-gray-900 mb-3 flex items-center">
+              Confirmed Players
+              <span className="ml-2 bg-gray-100 text-gray-800 text-xs px-2 py-1 rounded-full">
+                {Math.min(match.signups.length, 8)}/8
+              </span>
+            </h4>
+            <div className="space-y-2">
+              {match.signups.slice(0, 8).map((player, index) => (
+                <div key={index} className="flex items-center justify-between bg-gray-50 px-3 py-2 rounded-md">
+                  <span className="text-sm">
+                    <span className="font-medium text-gray-700">#{index + 1}</span>
+                    <span className="ml-2">{player}</span>
+                    {player === match.organizer && (
+                      <span className="ml-2 text-xs bg-black text-white px-2 py-0.5 rounded">ORGANIZER</span>
+                    )}
+                  </span>
+                  {!isArchived && (
+                    <button
+                      onClick={() => cancelSignup(match.id, player)}
+                      className="text-red-500 hover:text-red-700 opacity-75 hover:opacity-100"
+                      title="Cancel signup"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
+              ))}
+              {match.signups.length === 0 && (
+                <div className="text-sm text-gray-500 italic px-3 py-2">
+                  No players signed up yet
+                </div>
+              )}
+              {match.signups.length > 0 && match.signups.length < 8 && (
+                <div className="text-sm text-gray-500 italic px-3 py-2">
+                  {8 - match.signups.length} spots remaining
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Waiting List */}
+          {match.signups.length > 8 && (
+            <div>
+              <h4 className="font-medium text-gray-900 mb-3 flex items-center">
+                <AlertCircle className="h-4 w-4 mr-1 text-gray-500" />
+                Waiting List
+                <span className="ml-2 bg-gray-200 text-gray-800 text-xs px-2 py-1 rounded-full">
+                  {match.signups.length - 8}
+                </span>
+              </h4>
+              <div className="space-y-2">
+                {match.signups.slice(8).map((player, index) => (
+                  <div key={index} className="flex items-center justify-between bg-gray-100 px-3 py-2 rounded-md">
+                    <span className="text-sm">
+                      <span className="font-medium text-gray-700">#{index + 9}</span>
+                      <span className="ml-2">{player}</span>
+                    </span>
+                    {!isArchived && (
+                      <button
+                        onClick={() => cancelSignup(match.id, player)}
+                        className="text-red-500 hover:text-red-700 opacity-75 hover:opacity-100"
+                        title="Cancel signup"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
 
   // Login form component
   const LoginForm = () => (
@@ -493,9 +653,44 @@ const DimondTennisApp = () => {
   };
 
   const getAvailableWednesdays = () => {
-    const allWednesdays = generateWednesdays();
+    const availableWednesdays = [];
     const organizedDates = organizedMatches.map(match => match.date);
-    return allWednesdays.filter(date => !organizedDates.includes(date));
+    const today = new Date();
+    let currentDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    
+    // Find the next Wednesday
+    while (currentDate.getDay() !== 3) {
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+    
+    // If today is already Wednesday, move to next Wednesday
+    if (today.getDay() === 3 && today.getHours() > 12) {
+      currentDate.setDate(currentDate.getDate() + 7);
+    }
+    
+    // Keep generating Wednesdays until we have 4 available ones
+    let weekOffset = 0;
+    while (availableWednesdays.length < 4) {
+      const wednesday = new Date(currentDate);
+      wednesday.setDate(currentDate.getDate() + (weekOffset * 7));
+      
+      const year = wednesday.getFullYear();
+      const month = String(wednesday.getMonth() + 1).padStart(2, '0');
+      const day = String(wednesday.getDate()).padStart(2, '0');
+      const dateString = `${year}-${month}-${day}`;
+      
+      // Only add if not already organized
+      if (!organizedDates.includes(dateString)) {
+        availableWednesdays.push(dateString);
+      }
+      
+      weekOffset++;
+      
+      // Safety break to prevent infinite loop (shouldn't happen in normal use)
+      if (weekOffset > 52) break;
+    }
+    
+    return availableWednesdays;
   };
 
   if (loading) {
@@ -547,7 +742,17 @@ const DimondTennisApp = () => {
                   : 'border-transparent text-gray-500 hover:text-gray-700'
               }`}
             >
-              View Matches
+              Current Matches
+            </button>
+            <button
+              onClick={() => setCurrentView('archived')}
+              className={`py-4 px-2 border-b-2 font-medium text-sm ${
+                currentView === 'archived'
+                  ? 'border-black text-black'
+                  : 'border-transparent text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              Archived Matches ({archivedMatches.length})
             </button>
             <button
               onClick={() => setCurrentView('organize')}
@@ -578,7 +783,7 @@ const DimondTennisApp = () => {
             {organizedMatches.length === 0 ? (
               <div className="text-center py-12">
                 <Calendar className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">No matches organized yet</h3>
+                <h3 className="text-lg font-medium text-gray-900 mb-2">No current matches organized</h3>
                 <p className="text-gray-500 mb-4">Someone needs to reserve courts and organize a match first</p>
                 <button
                   onClick={() => setCurrentView('organize')}
@@ -590,124 +795,34 @@ const DimondTennisApp = () => {
             ) : (
               <div className="grid lg:grid-cols-2 gap-6">
                 {organizedMatches.map(match => (
-                  <div key={match.id} className="bg-white rounded-lg shadow-md overflow-hidden">
-                    {/* Match Header */}
-                    <div className="bg-black text-white p-4">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h3 className="text-lg font-semibold">
-                            {formatShortDate(match.date)}
-                          </h3>
-                          <p className="text-gray-300 text-sm">
-                            {formatDate(match.date)}
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          <div className="flex items-center text-gray-300">
-                            <Clock className="h-4 w-4 mr-1" />
-                            <span className="text-sm">{match.time}</span>
-                          </div>
-                          <div className="flex items-center text-gray-300 mt-1">
-                            <User className="h-4 w-4 mr-1" />
-                            <span className="text-sm">by {match.organizer}</span>
-                          </div>
-                          <button
-                            onClick={() => deleteMatch(match.id)}
-                            className="mt-2 text-red-400 hover:text-red-300 text-xs"
-                            title="Delete entire match"
-                          >
-                            Delete Match
-                          </button>
-                        </div>
-                      </div>
-                    </div>
+                  <MatchCard key={match.id} match={match} isArchived={false} />
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
-                    {/* Sign Up Button */}
-                    <div className="p-4 border-b bg-gray-50">
-                      <button
-                        onClick={() => openSignupModal(match.id)}
-                        className="w-full px-4 py-2 bg-black text-white rounded-md hover:bg-gray-800 flex items-center justify-center font-medium"
-                      >
-                        <Plus className="h-4 w-4 mr-2" />
-                        Sign Up for This Match
-                      </button>
-                    </div>
+        {currentView === 'archived' && (
+          <div>
+            {/* Info Section */}
+            <div className="bg-white rounded-lg shadow-md p-6 mb-8">
+              <div className="text-center">
+                <h2 className="text-xl font-semibold text-gray-900 mb-2">Archived Matches</h2>
+                <p className="text-gray-600">Past matches are automatically archived the day after they occur.</p>
+              </div>
+            </div>
 
-                    {/* Players List */}
-                    <div className="p-4">
-                      <div className="space-y-4">
-                        {/* Confirmed Players */}
-                        <div>
-                          <h4 className="font-medium text-gray-900 mb-3 flex items-center">
-                            Confirmed Players
-                            <span className="ml-2 bg-gray-100 text-gray-800 text-xs px-2 py-1 rounded-full">
-                              {Math.min(match.signups.length, 8)}/8
-                            </span>
-                          </h4>
-                          <div className="space-y-2">
-                            {match.signups.slice(0, 8).map((player, index) => (
-                              <div key={index} className="flex items-center justify-between bg-gray-50 px-3 py-2 rounded-md">
-                                <span className="text-sm">
-                                  <span className="font-medium text-gray-700">#{index + 1}</span>
-                                  <span className="ml-2">{player}</span>
-                                  {player === match.organizer && (
-                                    <span className="ml-2 text-xs bg-black text-white px-2 py-0.5 rounded">ORGANIZER</span>
-                                  )}
-                                </span>
-                                <button
-                                  onClick={() => cancelSignup(match.id, player)}
-                                  className="text-red-500 hover:text-red-700 opacity-75 hover:opacity-100"
-                                  title="Cancel signup"
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </button>
-                              </div>
-                            ))}
-                            {match.signups.length === 0 && (
-                              <div className="text-sm text-gray-500 italic px-3 py-2">
-                                No players signed up yet
-                              </div>
-                            )}
-                            {match.signups.length > 0 && match.signups.length < 8 && (
-                              <div className="text-sm text-gray-500 italic px-3 py-2">
-                                {8 - match.signups.length} spots remaining
-                              </div>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Waiting List */}
-                        {match.signups.length > 8 && (
-                          <div>
-                            <h4 className="font-medium text-gray-900 mb-3 flex items-center">
-                              <AlertCircle className="h-4 w-4 mr-1 text-gray-500" />
-                              Waiting List
-                              <span className="ml-2 bg-gray-200 text-gray-800 text-xs px-2 py-1 rounded-full">
-                                {match.signups.length - 8}
-                              </span>
-                            </h4>
-                            <div className="space-y-2">
-                              {match.signups.slice(8).map((player, index) => (
-                                <div key={index} className="flex items-center justify-between bg-gray-100 px-3 py-2 rounded-md">
-                                  <span className="text-sm">
-                                    <span className="font-medium text-gray-700">#{index + 9}</span>
-                                    <span className="ml-2">{player}</span>
-                                  </span>
-                                  <button
-                                    onClick={() => cancelSignup(match.id, player)}
-                                    className="text-red-500 hover:text-red-700 opacity-75 hover:opacity-100"
-                                    title="Cancel signup"
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                  </button>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
+            {/* Archived Matches */}
+            {archivedMatches.length === 0 ? (
+              <div className="text-center py-12">
+                <Archive className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">No archived matches</h3>
+                <p className="text-gray-500">Past matches will appear here automatically</p>
+              </div>
+            ) : (
+              <div className="grid lg:grid-cols-2 gap-6">
+                {archivedMatches.map(match => (
+                  <MatchCard key={match.id} match={match} isArchived={true} />
                 ))}
               </div>
             )}
