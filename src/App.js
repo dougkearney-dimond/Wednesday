@@ -63,38 +63,6 @@ const DimondTennisApp = () => {
     return today >= dayAfterMatch;
   };
 
-  // Generate Wednesday dates
-  const generateWednesdays = () => {
-    const wednesdays = [];
-    const today = new Date();
-    let currentDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-    
-    // Find the next Wednesday
-    while (currentDate.getDay() !== 3) {
-      currentDate.setDate(currentDate.getDate() + 1);
-    }
-    
-    // If today is already Wednesday, move to next Wednesday
-    if (today.getDay() === 3 && today.getHours() > 12) {
-      currentDate.setDate(currentDate.getDate() + 7);
-    }
-    
-    // Generate 8 consecutive Wednesdays
-    for (let i = 0; i < 8; i++) {
-      const wednesday = new Date(currentDate);
-      wednesday.setDate(currentDate.getDate() + (i * 7));
-      
-      const year = wednesday.getFullYear();
-      const month = String(wednesday.getMonth() + 1).padStart(2, '0');
-      const day = String(wednesday.getDate()).padStart(2, '0');
-      const dateString = `${year}-${month}-${day}`;
-      
-      wednesdays.push(dateString);
-    }
-    
-    return wednesdays;
-  };
-
   // Load matches when authenticated
   useEffect(() => {
     if (!isAuthenticated) return;
