@@ -79,10 +79,10 @@ const DimondTennisApp = () => {
         
         console.log('Auth test response status:', response.status);
         if (response.ok) {
-          console.log('✅ Authentication working!');
+          console.log('âœ… Authentication working!');
         } else {
           const errorData = await response.json();
-          console.error('❌ Authentication failed:', errorData);
+          console.error('âŒ Authentication failed:', errorData);
         }
       } catch (error) {
         console.error('Auth test error:', error);
@@ -386,12 +386,12 @@ const DimondTennisApp = () => {
               </p>
               {isArchived && (
                 <p className="text-sm text-red-600 mb-2">
-                  ⚠️ This match has already occurred and is archived.
+                  âš ï¸ This match has already occurred and is archived.
                 </p>
               )}
               {!isArchived && match.signups.length >= 8 && (
                 <p className="text-sm text-amber-600">
-                  ⚠️ This match is full. You'll be added to the waiting list.
+                  âš ï¸ This match is full. You'll be added to the waiting list.
                 </p>
               )}
             </div>
@@ -883,11 +883,11 @@ const DimondTennisApp = () => {
             <div className="bg-gray-50 border border-gray-200 rounded-md p-4 max-w-lg mx-auto">
               <h3 className="font-medium text-gray-900 mb-2">How organizing works:</h3>
               <ul className="text-sm text-gray-700 space-y-1">
-                <li>• Reserve courts at cityofoakland.perfectmind.com first</li>
-                <li>• Post your match here with date and time</li>
-                <li>• You'll be automatically signed up as player #1</li>
-                <li>• Other players can sign up (8 total spots)</li>
-                <li>• Additional signups go on a waiting list</li>
+                <li>â€¢ Reserve courts at cityofoakland.perfectmind.com first</li>
+                <li>â€¢ Post your match here with date and time</li>
+                <li>â€¢ You'll be automatically signed up as player #1</li>
+                <li>â€¢ Other players can sign up (8 total spots)</li>
+                <li>â€¢ Additional signups go on a waiting list</li>
               </ul>
             </div>
 
