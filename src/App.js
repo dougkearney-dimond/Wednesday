@@ -908,7 +908,7 @@ const DimondTennisApp = () => {
               </a>
             </div>
           </div>
-        )} 
+        )}
 
         {/* Footer Info */}
         <div className="mt-12 bg-white rounded-lg shadow-md p-6">
