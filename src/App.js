@@ -891,24 +891,8 @@ const DimondTennisApp = () => {
               </ul>
             </div>
 
-            {/* Airtable Access Info */}
-            <div className="bg-green-50 border border-green-200 rounded-md p-4 max-w-lg mx-auto">
-              <h3 className="font-medium text-green-900 mb-2">Admin Access:</h3>
-              <p className="text-sm text-green-800 mb-3">
-                You can also view and manage all matches directly in Airtable:
-              </p>
-              <a 
-                href={`https://airtable.com/${AIRTABLE_BASE_ID}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center bg-green-600 text-white px-4 py-2 rounded-md text-sm hover:bg-green-700"
-              >
-                Open Airtable Database
-                <ExternalLink className="h-4 w-4 ml-2" />
-              </a>
-            </div>
-          </div>
-        )}
+           
+        )} 
 
         {/* Footer Info */}
         <div className="mt-12 bg-white rounded-lg shadow-md p-6">
