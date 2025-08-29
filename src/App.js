@@ -46,6 +46,23 @@ const DimondTennisApp = () => {
   // Signup modal state
   const [signupModal, setSignupModal] = useState({ isOpen: false, matchId: null, playerName: '' });
   
+  // Results modal state
+  const [resultsModal, setResultsModal] = useState({ 
+    isOpen: false, 
+    matchId: null, 
+    teams: [
+      { player1: '', player2: '' },
+      { player1: '', player2: '' },
+      { player1: '', player2: '' },
+      { player1: '', player2: '' }
+    ],
+    scores: {
+      set1: { match1: '', match2: '' }, // Team1 vs Team2, Team3 vs Team4
+      set2: { match1: '', match2: '' }, // Team1 vs Team3, Team2 vs Team4  
+      set3: { match1: '', match2: '' }  // Team1 vs Team4, Team2 vs Team3
+    }
+  });
+  
   const [newMatch, setNewMatch] = useState({
     date: '',
     time: '',
@@ -67,6 +84,8 @@ const DimondTennisApp = () => {
   useEffect(() => {
     if (!isAuthenticated) return;
 
+    console.log('useEffect starting - authenticated');
+
     // Simple auth test first
     const testAuth = async () => {
       try {
@@ -79,25 +98,26 @@ const DimondTennisApp = () => {
         
         console.log('Auth test response status:', response.status);
         if (response.ok) {
-          console.log('âœ… Authentication working!');
+          console.log('✅ Authentication working!');
         } else {
           const errorData = await response.json();
-          console.error('âŒ Authentication failed:', errorData);
+          console.error('❌ Authentication failed:', errorData);
         }
       } catch (error) {
         console.error('Auth test error:', error);
       }
     };
 
-    testAuth();
-
     // Fetch matches from Airtable - moved inside useEffect to avoid dependency issues
     const fetchMatches = async () => {
       try {
+        console.log('Starting to fetch matches...');
         setLoading(true);
         const response = await fetch(`${airtableUrl}?sort%5B0%5D%5Bfield%5D=Date&sort%5B0%5D%5Bdirection%5D=asc`, {
           headers: airtableHeaders
         });
+        
+        console.log('Fetch response status:', response.status);
         
         if (!response.ok) {
           const errorData = await response.json();
@@ -106,18 +126,51 @@ const DimondTennisApp = () => {
         }
         
         const data = await response.json();
+        console.log('Raw data received:', data);
         
-        const matches = data.records.map(record => ({
-          id: record.id,
-          date: record.fields.Date || '',
-          time: record.fields.Time || '',
-          organizer: record.fields.Organizer || '',
-          signups: record.fields.Signups ? record.fields.Signups.split('\n').filter(s => s.trim()) : []
-        }));
+        const matches = data.records.map(record => {
+          let teams = null;
+          let scores = null;
+          
+          // Safely parse Teams field
+          try {
+            if (record.fields.Teams) {
+              teams = JSON.parse(record.fields.Teams);
+            }
+          } catch (error) {
+            console.log('Error parsing Teams field for record:', record.id);
+          }
+          
+          // Safely parse Scores field  
+          try {
+            if (record.fields.Scores) {
+              scores = JSON.parse(record.fields.Scores);
+            }
+          } catch (error) {
+            console.log('Error parsing Scores field for record:', record.id);
+          }
+          
+          return {
+            id: record.id,
+            date: record.fields.Date || '',
+            time: record.fields.Time || '',
+            organizer: record.fields.Organizer || '',
+            signups: record.fields.Signups ? record.fields.Signups.split('\n').filter(s => s.trim()) : [],
+            teams: teams,
+            scores: scores
+          };
+        });
         
         // Separate current and archived matches
         const currentMatches = matches.filter(match => !shouldArchiveMatch(match.date));
         const pastMatches = matches.filter(match => shouldArchiveMatch(match.date));
+        
+        console.log('=== MATCHES DEBUG ===');
+        console.log('Total matches loaded:', matches.length);
+        console.log('Current matches:', currentMatches.length);
+        console.log('Archived matches:', pastMatches.length);
+        console.log('Sample archived match:', pastMatches[0]);
+        console.log('==================');
         
         setOrganizedMatches(currentMatches);
         setArchivedMatches(pastMatches);
@@ -129,6 +182,10 @@ const DimondTennisApp = () => {
       }
     };
 
+    console.log('About to call testAuth()');
+    testAuth();
+
+    console.log('About to call fetchMatches()');
     fetchMatches();
   }, [isAuthenticated]);
 
@@ -146,17 +203,48 @@ const DimondTennisApp = () => {
       
       const data = await response.json();
       
-      const matches = data.records.map(record => ({
-        id: record.id,
-        date: record.fields.Date || '',
-        time: record.fields.Time || '',
-        organizer: record.fields.Organizer || '',
-        signups: record.fields.Signups ? record.fields.Signups.split('\n').filter(s => s.trim()) : []
-      }));
+      const matches = data.records.map(record => {
+        let teams = null;
+        let scores = null;
+        
+        // Safely parse Teams field
+        try {
+          if (record.fields.Teams) {
+            teams = JSON.parse(record.fields.Teams);
+          }
+        } catch (error) {
+          console.log('Error parsing Teams field for record:', record.id);
+        }
+        
+        // Safely parse Scores field  
+        try {
+          if (record.fields.Scores) {
+            scores = JSON.parse(record.fields.Scores);
+          }
+        } catch (error) {
+          console.log('Error parsing Scores field for record:', record.id);
+        }
+        
+        return {
+          id: record.id,
+          date: record.fields.Date || '',
+          time: record.fields.Time || '',
+          organizer: record.fields.Organizer || '',
+          signups: record.fields.Signups ? record.fields.Signups.split('\n').filter(s => s.trim()) : [],
+          teams: teams,
+          scores: scores
+        };
+      });
       
       // Separate current and archived matches
       const currentMatches = matches.filter(match => !shouldArchiveMatch(match.date));
       const pastMatches = matches.filter(match => shouldArchiveMatch(match.date));
+      
+      console.log('=== REFETCH MATCHES DEBUG ===');
+      console.log('Total matches loaded:', matches.length);
+      console.log('Current matches:', currentMatches.length);
+      console.log('Archived matches:', pastMatches.length);
+      console.log('==================');
       
       setOrganizedMatches(currentMatches);
       setArchivedMatches(pastMatches);
@@ -235,6 +323,47 @@ const DimondTennisApp = () => {
     setSignupModal({ isOpen: false, matchId: null, playerName: '' });
   };
 
+  // Open results modal
+  const openResultsModal = (matchId) => {
+    const match = archivedMatches.find(m => m.id === matchId);
+    if (match) {
+      setResultsModal({
+        isOpen: true,
+        matchId,
+        teams: match.teams || [
+          { player1: '', player2: '' },
+          { player1: '', player2: '' },
+          { player1: '', player2: '' },
+          { player1: '', player2: '' }
+        ],
+        scores: match.scores || {
+          set1: { match1: '', match2: '' },
+          set2: { match1: '', match2: '' },
+          set3: { match1: '', match2: '' }
+        }
+      });
+    }
+  };
+
+  // Close results modal
+  const closeResultsModal = () => {
+    setResultsModal({
+      isOpen: false,
+      matchId: null,
+      teams: [
+        { player1: '', player2: '' },
+        { player1: '', player2: '' },
+        { player1: '', player2: '' },
+        { player1: '', player2: '' }
+      ],
+      scores: {
+        set1: { match1: '', match2: '' },
+        set2: { match1: '', match2: '' },
+        set3: { match1: '', match2: '' }
+      }
+    });
+  };
+
   // Handle signup from modal
   const handleSignupFromModal = async () => {
     const { matchId, playerName } = signupModal;
@@ -271,6 +400,36 @@ const DimondTennisApp = () => {
     } catch (error) {
       console.error('Error signing up:', error);
       alert('Error signing up. Please try again.');
+    }
+  };
+
+  // Save results from modal
+  const handleSaveResults = async () => {
+    try {
+      setLoading(true);
+      
+      const response = await fetch(`${airtableUrl}/${resultsModal.matchId}`, {
+        method: 'PATCH',
+        headers: airtableHeaders,
+        body: JSON.stringify({
+          fields: {
+            Teams: JSON.stringify(resultsModal.teams),
+            Scores: JSON.stringify(resultsModal.scores)
+          }
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      closeResultsModal();
+      await refetchMatches(); // Refresh the matches list
+      setLoading(false);
+    } catch (error) {
+      console.error('Error saving results:', error);
+      alert('Error saving results. Please try again.');
+      setLoading(false);
     }
   };
 
@@ -386,12 +545,12 @@ const DimondTennisApp = () => {
               </p>
               {isArchived && (
                 <p className="text-sm text-red-600 mb-2">
-                  âš ï¸ This match has already occurred and is archived.
+                  ⚠️ This match has already occurred and is archived.
                 </p>
               )}
               {!isArchived && match.signups.length >= 8 && (
                 <p className="text-sm text-amber-600">
-                  âš ï¸ This match is full. You'll be added to the waiting list.
+                  ⚠️ This match is full. You'll be added to the waiting list.
                 </p>
               )}
             </div>
@@ -407,6 +566,209 @@ const DimondTennisApp = () => {
               </button>
               <button
                 onClick={closeSignupModal}
+                className="flex-1 bg-gray-200 text-gray-800 py-2 px-4 rounded-md hover:bg-gray-300 font-medium"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Results Modal Component
+  const ResultsModal = () => {
+    if (!resultsModal.isOpen) return null;
+
+    const match = archivedMatches.find(m => m.id === resultsModal.matchId);
+    if (!match) return null;
+
+    const updateTeam = (teamIndex, field, value) => {
+      const updatedTeams = [...resultsModal.teams];
+      updatedTeams[teamIndex][field] = value;
+      setResultsModal({ ...resultsModal, teams: updatedTeams });
+    };
+
+    const updateScore = (set, matchNum, value) => {
+      const updatedScores = { ...resultsModal.scores };
+      updatedScores[set][matchNum] = value;
+      setResultsModal({ ...resultsModal, scores: updatedScores });
+    };
+
+    const getMatchupText = (set, matchNum) => {
+      if (set === 'set1') {
+        return matchNum === 'match1' ? 'Team 1 vs Team 2' : 'Team 3 vs Team 4';
+      } else if (set === 'set2') {
+        return matchNum === 'match1' ? 'Team 1 vs Team 3' : 'Team 2 vs Team 4';
+      } else { // set3
+        return matchNum === 'match1' ? 'Team 1 vs Team 4' : 'Team 2 vs Team 3';
+      }
+    };
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+          {/* Modal Header */}
+          <div className="bg-gray-600 text-white p-4 rounded-t-lg">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold">Record Match Results</h3>
+              <button
+                onClick={closeResultsModal}
+                className="text-gray-300 hover:text-white"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <p className="text-gray-300 text-sm mt-1">
+              {formatDate(match.date)} at {match.time}
+            </p>
+          </div>
+
+          {/* Modal Body */}
+          <div className="p-6">
+            {/* Teams Section */}
+            <div className="mb-8">
+              <h4 className="text-lg font-semibold mb-4">Teams</h4>
+              <div className="grid md:grid-cols-2 gap-4">
+                {resultsModal.teams.map((team, index) => (
+                  <div key={index} className="border border-gray-300 rounded-lg p-4">
+                    <h5 className="font-medium mb-3">Team {index + 1}</h5>
+                    <div className="space-y-2">
+                      <input
+                        type="text"
+                        value={team.player1}
+                        onChange={(e) => updateTeam(index, 'player1', e.target.value)}
+                        placeholder="Player 1 name"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500"
+                      />
+                      <input
+                        type="text"
+                        value={team.player2}
+                        onChange={(e) => updateTeam(index, 'player2', e.target.value)}
+                        placeholder="Player 2 name"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500"
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Scores Section */}
+            <div className="mb-6">
+              <h4 className="text-lg font-semibold mb-4">Match Scores</h4>
+              <p className="text-sm text-gray-600 mb-4">
+                Each team plays one set against each other team. Enter scores as "6-4", "7-5", etc.
+              </p>
+              
+              <div className="space-y-6">
+                {/* Set 1 */}
+                <div className="border border-gray-300 rounded-lg p-4">
+                  <h5 className="font-medium mb-3">Set 1</h5>
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        {getMatchupText('set1', 'match1')}
+                      </label>
+                      <input
+                        type="text"
+                        value={resultsModal.scores.set1.match1}
+                        onChange={(e) => updateScore('set1', 'match1', e.target.value)}
+                        placeholder="e.g., 6-4"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        {getMatchupText('set1', 'match2')}
+                      </label>
+                      <input
+                        type="text"
+                        value={resultsModal.scores.set1.match2}
+                        onChange={(e) => updateScore('set1', 'match2', e.target.value)}
+                        placeholder="e.g., 6-3"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Set 2 */}
+                <div className="border border-gray-300 rounded-lg p-4">
+                  <h5 className="font-medium mb-3">Set 2</h5>
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        {getMatchupText('set2', 'match1')}
+                      </label>
+                      <input
+                        type="text"
+                        value={resultsModal.scores.set2.match1}
+                        onChange={(e) => updateScore('set2', 'match1', e.target.value)}
+                        placeholder="e.g., 4-6"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        {getMatchupText('set2', 'match2')}
+                      </label>
+                      <input
+                        type="text"
+                        value={resultsModal.scores.set2.match2}
+                        onChange={(e) => updateScore('set2', 'match2', e.target.value)}
+                        placeholder="e.g., 6-2"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Set 3 */}
+                <div className="border border-gray-300 rounded-lg p-4">
+                  <h5 className="font-medium mb-3">Set 3</h5>
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        {getMatchupText('set3', 'match1')}
+                      </label>
+                      <input
+                        type="text"
+                        value={resultsModal.scores.set3.match1}
+                        onChange={(e) => updateScore('set3', 'match1', e.target.value)}
+                        placeholder="e.g., 7-5"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        {getMatchupText('set3', 'match2')}
+                      </label>
+                      <input
+                        type="text"
+                        value={resultsModal.scores.set3.match2}
+                        onChange={(e) => updateScore('set3', 'match2', e.target.value)}
+                        placeholder="e.g., 3-6"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Actions */}
+            <div className="flex space-x-3">
+              <button
+                onClick={handleSaveResults}
+                disabled={loading}
+                className="flex-1 bg-gray-600 text-white py-2 px-4 rounded-md hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+              >
+                {loading ? 'Saving...' : 'Save Results'}
+              </button>
+              <button
+                onClick={closeResultsModal}
                 className="flex-1 bg-gray-200 text-gray-800 py-2 px-4 rounded-md hover:bg-gray-300 font-medium"
               >
                 Cancel
@@ -451,6 +813,15 @@ const DimondTennisApp = () => {
                 Delete Match
               </button>
             )}
+            {isArchived && (
+              <button
+                onClick={() => openResultsModal(match.id)}
+                className="mt-2 text-blue-400 hover:text-blue-300 text-xs"
+                title="Record match results"
+              >
+                {match.teams ? 'Edit Results' : 'Record Results'}
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -465,6 +836,41 @@ const DimondTennisApp = () => {
             <Plus className="h-4 w-4 mr-2" />
             Sign Up for This Match
           </button>
+        </div>
+      )}
+
+      {/* Match Results for Archived Matches */}
+      {isArchived && match.teams && match.scores && (
+        <div className="p-4 border-b bg-blue-50">
+          <h4 className="font-medium text-gray-900 mb-3">Match Results</h4>
+          
+          {/* Teams */}
+          <div className="grid grid-cols-2 gap-2 mb-4">
+            {match.teams.map((team, index) => (
+              <div key={index} className="text-sm">
+                <span className="font-medium">Team {index + 1}:</span> {team.player1} & {team.player2}
+              </div>
+            ))}
+          </div>
+
+          {/* Scores */}
+          <div className="space-y-2 text-sm">
+            <div>
+              <span className="font-medium">Set 1:</span> 
+              <span className="ml-2">T1 vs T2: {match.scores.set1.match1}</span>
+              <span className="ml-4">T3 vs T4: {match.scores.set1.match2}</span>
+            </div>
+            <div>
+              <span className="font-medium">Set 2:</span>
+              <span className="ml-2">T1 vs T3: {match.scores.set2.match1}</span>
+              <span className="ml-4">T2 vs T4: {match.scores.set2.match2}</span>
+            </div>
+            <div>
+              <span className="font-medium">Set 3:</span>
+              <span className="ml-2">T1 vs T4: {match.scores.set3.match1}</span>
+              <span className="ml-4">T2 vs T3: {match.scores.set3.match2}</span>
+            </div>
+          </div>
         </div>
       )}
 
@@ -883,29 +1289,12 @@ const DimondTennisApp = () => {
             <div className="bg-gray-50 border border-gray-200 rounded-md p-4 max-w-lg mx-auto">
               <h3 className="font-medium text-gray-900 mb-2">How organizing works:</h3>
               <ul className="text-sm text-gray-700 space-y-1">
-                <li>â€¢ Reserve courts at cityofoakland.perfectmind.com first</li>
-                <li>â€¢ Post your match here with date and time</li>
-                <li>â€¢ You'll be automatically signed up as player #1</li>
-                <li>â€¢ Other players can sign up (8 total spots)</li>
-                <li>â€¢ Additional signups go on a waiting list</li>
+                <li>• Reserve courts at cityofoakland.perfectmind.com first</li>
+                <li>• Post your match here with date and time</li>
+                <li>• You'll be automatically signed up as player #1</li>
+                <li>• Other players can sign up (8 total spots)</li>
+                <li>• Additional signups go on a waiting list</li>
               </ul>
-            </div>
-
-            {/* Airtable Access Info */}
-            <div className="bg-green-50 border border-green-200 rounded-md p-4 max-w-lg mx-auto">
-              <h3 className="font-medium text-green-900 mb-2">Admin Access:</h3>
-              <p className="text-sm text-green-800 mb-3">
-                You can also view and manage all matches directly in Airtable:
-              </p>
-              <a 
-                href={`https://airtable.com/${AIRTABLE_BASE_ID}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center bg-green-600 text-white px-4 py-2 rounded-md text-sm hover:bg-green-700"
-              >
-                Open Airtable Database
-                <ExternalLink className="h-4 w-4 ml-2" />
-              </a>
             </div>
           </div>
         )}
@@ -933,6 +1322,9 @@ const DimondTennisApp = () => {
 
       {/* Signup Modal */}
       <SignupModal />
+
+      {/* Results Modal */}
+      <ResultsModal />
     </div>
   );
 };
