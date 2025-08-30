@@ -1,5 +1,127 @@
+{/* Scores Section */}
+            <div className="mb-6">
+              <h4 className="text-lg font-semibold mb-4">Match Scores</h4>
+              <p className="text-sm text-gray-600 mb-4">
+                Each team plays one set against each other team. Enter scores as "6-4", "7-5", etc.
+              </p>
+              
+              <div className="space-y-6">
+                {/* Set 1 */}
+                <div className="border border-gray-300 rounded-lg p-4">
+                  <h5 className="font-medium mb-3">Set 1</h5>
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        {getMatchupText('set1', 'match1')}
+                      </label>
+                      <input
+                        type="text"
+                        value={resultsModal.scores.set1.match1}
+                        onChange={(e) => updateScore('set1', 'match1', e.target.value)}
+                        placeholder="e.g., 6-4"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        {getMatchupText('set1', 'match2')}
+                      </label>
+                      <input
+                        type="text"
+                        value={resultsModal.scores.set1.match2}
+                        onChange={(e) => updateScore('set1', 'match2', e.target.value)}
+                        placeholder="e.g., 6-3"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500"
+                      />
+                    </div>
+                  </div>
+                </div>
 
-import React, { useState, useEffect, useRef } from 'react';
+                {/* Set 2 */}
+                <div className="border border-gray-300 rounded-lg p-4">
+                  <h5 className="font-medium mb-3">Set 2</h5>
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        {getMatchupText('set2', 'match1')}
+                      </label>
+                      <input
+                        type="text"
+                        value={resultsModal.scores.set2.match1}
+                        onChange={(e) => updateScore('set2', 'match1', e.target.value)}
+                        placeholder="e.g., 4-6"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        {getMatchupText('set2', 'match2')}
+                      </label>
+                      <input
+                        type="text"
+                        value={resultsModal.scores.set2.match2}
+                        onChange={(e) => updateScore('set2', 'match2', e.target.value)}
+                        placeholder="e.g., 6-2"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Set 3 */}
+                <div className="border border-gray-300 rounded-lg p-4">
+                  <h5 className="font-medium mb-3">Set 3</h5>
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        {getMatchupText('set3', 'match1')}
+                      </label>
+                      <input
+                        type="text"
+                        value={resultsModal.scores.set3.match1}
+                        onChange={(e) => updateScore('set3', 'match1', e.target.value)}
+                        placeholder="e.g., 7-5"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        {getMatchupText('set3', 'match2')}
+                      </label>
+                      <input
+                        type="text"
+                        value={resultsModal.scores.set3.match2}
+                        onChange={(e) => updateScore('set3', 'match2', e.target.value)}
+                        placeholder="e.g., 3-6"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Actions */}
+            <div className="flex space-x-3">
+              <button
+                onClick={handleSaveResults}
+                disabled={loading}
+                className="flex-1 bg-gray-600 text-white py-2 px-4 rounded-md hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+              >
+                {loading ? 'Saving...' : 'Save Results'}
+              </button>
+              <button
+                onClick={closeResultsModal}
+                className="flex-1 bg-gray-200 text-gray-800 py-2 px-4 rounded-md hover:bg-gray-300 font-medium"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };import React, { useState, useEffect, useRef } from 'react';
 import { Calendar, Clock, Trash2, Plus, AlertCircle, ExternalLink, User, X, Archive } from 'lucide-react';
 
 // Airtable Configuration - Using secure environment variables
