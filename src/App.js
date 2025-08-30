@@ -57,9 +57,9 @@ const DimondTennisApp = () => {
       { player1: '', player2: '' }
     ],
     scores: {
-      set1: { match1: '', match2: '' },
-      set2: { match1: '', match2: '' },
-      set3: { match1: '', match2: '' }
+      set1: { match1: { team1: '', team2: '' }, match2: { team1: '', team2: '' } },
+      set2: { match1: { team1: '', team2: '' }, match2: { team1: '', team2: '' } },
+      set3: { match1: { team1: '', team2: '' }, match2: { team1: '', team2: '' } }
     }
   });
   
@@ -286,9 +286,9 @@ const DimondTennisApp = () => {
           { player1: '', player2: '' }
         ],
         scores: match.scores || {
-          set1: { match1: '', match2: '' },
-          set2: { match1: '', match2: '' },
-          set3: { match1: '', match2: '' }
+          set1: { match1: { team1: '', team2: '' }, match2: { team1: '', team2: '' } },
+          set2: { match1: { team1: '', team2: '' }, match2: { team1: '', team2: '' } },
+          set3: { match1: { team1: '', team2: '' }, match2: { team1: '', team2: '' } }
         }
       });
     }
@@ -305,9 +305,9 @@ const DimondTennisApp = () => {
         { player1: '', player2: '' }
       ],
       scores: {
-        set1: { match1: '', match2: '' },
-        set2: { match1: '', match2: '' },
-        set3: { match1: '', match2: '' }
+        set1: { match1: { team1: '', team2: '' }, match2: { team1: '', team2: '' } },
+        set2: { match1: { team1: '', team2: '' }, match2: { team1: '', team2: '' } },
+        set3: { match1: { team1: '', team2: '' }, match2: { team1: '', team2: '' } }
       }
     });
   };
@@ -637,14 +637,17 @@ const DimondTennisApp = () => {
     // Get unassigned players
     const unassignedPlayers = match.signups.slice(0, 8).filter(player => !assignedPlayers.has(player));
 
-    const updateScore = (set, matchNum, value) => {
+    const updateScore = (set, matchNum, team, value) => {
       setResultsModal(prev => ({
         ...prev,
         scores: {
           ...prev.scores,
           [set]: {
             ...prev.scores[set],
-            [matchNum]: value
+            [matchNum]: {
+              ...prev.scores[set][matchNum],
+              [team]: value
+            }
           }
         }
       }));
@@ -805,25 +808,57 @@ const DimondTennisApp = () => {
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         {getMatchupText('set1', 'match1')}
                       </label>
-                      <input
-                        type="text"
-                        value={resultsModal.scores.set1.match1}
-                        onChange={(e) => updateScore('set1', 'match1', e.target.value)}
-                        placeholder="e.g., 6-4"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500"
-                      />
+                      <div className="flex items-center space-x-2">
+                        <select
+                          value={resultsModal.scores.set1.match1.team1}
+                          onChange={(e) => updateScore('set1', 'match1', 'team1', e.target.value)}
+                          className="w-20 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500"
+                        >
+                          <option value="">-</option>
+                          {[0,1,2,3,4,5,6,7].map(num => (
+                            <option key={num} value={num}>{num}</option>
+                          ))}
+                        </select>
+                        <span className="text-gray-500">-</span>
+                        <select
+                          value={resultsModal.scores.set1.match1.team2}
+                          onChange={(e) => updateScore('set1', 'match1', 'team2', e.target.value)}
+                          className="w-20 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500"
+                        >
+                          <option value="">-</option>
+                          {[0,1,2,3,4,5,6,7].map(num => (
+                            <option key={num} value={num}>{num}</option>
+                          ))}
+                        </select>
+                      </div>
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         {getMatchupText('set1', 'match2')}
                       </label>
-                      <input
-                        type="text"
-                        value={resultsModal.scores.set1.match2}
-                        onChange={(e) => updateScore('set1', 'match2', e.target.value)}
-                        placeholder="e.g., 6-3"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500"
-                      />
+                      <div className="flex items-center space-x-2">
+                        <select
+                          value={resultsModal.scores.set1.match2.team1}
+                          onChange={(e) => updateScore('set1', 'match2', 'team1', e.target.value)}
+                          className="w-20 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500"
+                        >
+                          <option value="">-</option>
+                          {[0,1,2,3,4,5,6,7].map(num => (
+                            <option key={num} value={num}>{num}</option>
+                          ))}
+                        </select>
+                        <span className="text-gray-500">-</span>
+                        <select
+                          value={resultsModal.scores.set1.match2.team2}
+                          onChange={(e) => updateScore('set1', 'match2', 'team2', e.target.value)}
+                          className="w-20 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500"
+                        >
+                          <option value="">-</option>
+                          {[0,1,2,3,4,5,6,7].map(num => (
+                            <option key={num} value={num}>{num}</option>
+                          ))}
+                        </select>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -835,25 +870,57 @@ const DimondTennisApp = () => {
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         {getMatchupText('set2', 'match1')}
                       </label>
-                      <input
-                        type="text"
-                        value={resultsModal.scores.set2.match1}
-                        onChange={(e) => updateScore('set2', 'match1', e.target.value)}
-                        placeholder="e.g., 4-6"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500"
-                      />
+                      <div className="flex items-center space-x-2">
+                        <select
+                          value={resultsModal.scores.set2.match1.team1}
+                          onChange={(e) => updateScore('set2', 'match1', 'team1', e.target.value)}
+                          className="w-20 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500"
+                        >
+                          <option value="">-</option>
+                          {[0,1,2,3,4,5,6,7].map(num => (
+                            <option key={num} value={num}>{num}</option>
+                          ))}
+                        </select>
+                        <span className="text-gray-500">-</span>
+                        <select
+                          value={resultsModal.scores.set2.match1.team2}
+                          onChange={(e) => updateScore('set2', 'match1', 'team2', e.target.value)}
+                          className="w-20 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500"
+                        >
+                          <option value="">-</option>
+                          {[0,1,2,3,4,5,6,7].map(num => (
+                            <option key={num} value={num}>{num}</option>
+                          ))}
+                        </select>
+                      </div>
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         {getMatchupText('set2', 'match2')}
                       </label>
-                      <input
-                        type="text"
-                        value={resultsModal.scores.set2.match2}
-                        onChange={(e) => updateScore('set2', 'match2', e.target.value)}
-                        placeholder="e.g., 6-2"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500"
-                      />
+                      <div className="flex items-center space-x-2">
+                        <select
+                          value={resultsModal.scores.set2.match2.team1}
+                          onChange={(e) => updateScore('set2', 'match2', 'team1', e.target.value)}
+                          className="w-20 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500"
+                        >
+                          <option value="">-</option>
+                          {[0,1,2,3,4,5,6,7].map(num => (
+                            <option key={num} value={num}>{num}</option>
+                          ))}
+                        </select>
+                        <span className="text-gray-500">-</span>
+                        <select
+                          value={resultsModal.scores.set2.match2.team2}
+                          onChange={(e) => updateScore('set2', 'match2', 'team2', e.target.value)}
+                          className="w-20 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500"
+                        >
+                          <option value="">-</option>
+                          {[0,1,2,3,4,5,6,7].map(num => (
+                            <option key={num} value={num}>{num}</option>
+                          ))}
+                        </select>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -865,25 +932,57 @@ const DimondTennisApp = () => {
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         {getMatchupText('set3', 'match1')}
                       </label>
-                      <input
-                        type="text"
-                        value={resultsModal.scores.set3.match1}
-                        onChange={(e) => updateScore('set3', 'match1', e.target.value)}
-                        placeholder="e.g., 7-5"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500"
-                      />
+                      <div className="flex items-center space-x-2">
+                        <select
+                          value={resultsModal.scores.set3.match1.team1}
+                          onChange={(e) => updateScore('set3', 'match1', 'team1', e.target.value)}
+                          className="w-20 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500"
+                        >
+                          <option value="">-</option>
+                          {[0,1,2,3,4,5,6,7].map(num => (
+                            <option key={num} value={num}>{num}</option>
+                          ))}
+                        </select>
+                        <span className="text-gray-500">-</span>
+                        <select
+                          value={resultsModal.scores.set3.match1.team2}
+                          onChange={(e) => updateScore('set3', 'match1', 'team2', e.target.value)}
+                          className="w-20 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500"
+                        >
+                          <option value="">-</option>
+                          {[0,1,2,3,4,5,6,7].map(num => (
+                            <option key={num} value={num}>{num}</option>
+                          ))}
+                        </select>
+                      </div>
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         {getMatchupText('set3', 'match2')}
                       </label>
-                      <input
-                        type="text"
-                        value={resultsModal.scores.set3.match2}
-                        onChange={(e) => updateScore('set3', 'match2', e.target.value)}
-                        placeholder="e.g., 3-6"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500"
-                      />
+                      <div className="flex items-center space-x-2">
+                        <select
+                          value={resultsModal.scores.set3.match2.team1}
+                          onChange={(e) => updateScore('set3', 'match2', 'team1', e.target.value)}
+                          className="w-20 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500"
+                        >
+                          <option value="">-</option>
+                          {[0,1,2,3,4,5,6,7].map(num => (
+                            <option key={num} value={num}>{num}</option>
+                          ))}
+                        </select>
+                        <span className="text-gray-500">-</span>
+                        <select
+                          value={resultsModal.scores.set3.match2.team2}
+                          onChange={(e) => updateScore('set3', 'match2', 'team2', e.target.value)}
+                          className="w-20 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500"
+                        >
+                          <option value="">-</option>
+                          {[0,1,2,3,4,5,6,7].map(num => (
+                            <option key={num} value={num}>{num}</option>
+                          ))}
+                        </select>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -982,18 +1081,18 @@ const DimondTennisApp = () => {
           <div className="space-y-2 text-sm">
             <div>
               <span className="font-medium">Set 1:</span> 
-              <span className="ml-2">T1 vs T2: {match.scores.set1.match1}</span>
-              <span className="ml-4">T3 vs T4: {match.scores.set1.match2}</span>
+              <span className="ml-2">T1 vs T2: {match.scores.set1.match1.team1}-{match.scores.set1.match1.team2}</span>
+              <span className="ml-4">T3 vs T4: {match.scores.set1.match2.team1}-{match.scores.set1.match2.team2}</span>
             </div>
             <div>
               <span className="font-medium">Set 2:</span>
-              <span className="ml-2">T1 vs T3: {match.scores.set2.match1}</span>
-              <span className="ml-4">T2 vs T4: {match.scores.set2.match2}</span>
+              <span className="ml-2">T1 vs T3: {match.scores.set2.match1.team1}-{match.scores.set2.match1.team2}</span>
+              <span className="ml-4">T2 vs T4: {match.scores.set2.match2.team1}-{match.scores.set2.match2.team2}</span>
             </div>
             <div>
               <span className="font-medium">Set 3:</span>
-              <span className="ml-2">T1 vs T4: {match.scores.set3.match1}</span>
-              <span className="ml-4">T2 vs T3: {match.scores.set3.match2}</span>
+              <span className="ml-2">T1 vs T4: {match.scores.set3.match1.team1}-{match.scores.set3.match1.team2}</span>
+              <span className="ml-4">T2 vs T3: {match.scores.set3.match2.team1}-{match.scores.set3.match2.team2}</span>
             </div>
           </div>
         </div>
