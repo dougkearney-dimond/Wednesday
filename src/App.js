@@ -1,4 +1,170 @@
-{/* Scores Section */}
+// Results Modal Component
+  const ResultsModal = () => {
+    if (!resultsModal.isOpen) return null;
+
+    const match = archivedMatches.find(m => m.id === resultsModal.matchId);
+    if (!match) return null;
+
+    // Get assigned players
+    const assignedPlayers = new Set();
+    resultsModal.teams.forEach(team => {
+      if (team.player1) assignedPlayers.add(team.player1);
+      if (team.player2) assignedPlayers.add(team.player2);
+    });
+
+    // Get unassigned players
+    const unassignedPlayers = match.signups.slice(0, 8).filter(player => !assignedPlayers.has(player));
+
+    const updateScore = (set, matchNum, value) => {
+      const updatedScores = { ...resultsModal.scores };
+      updatedScores[set][matchNum] = value;
+      setResultsModal({ ...resultsModal, scores: updatedScores });
+    };
+
+    const getMatchupText = (set, matchNum) => {
+      if (set === 'set1') {
+        return matchNum === 'match1' ? 'Team 1 vs Team 2' : 'Team 3 vs Team 4';
+      } else if (set === 'set2') {
+        return matchNum === 'match1' ? 'Team 1 vs Team 3' : 'Team 2 vs Team 4';
+      } else {
+        return matchNum === 'match1' ? 'Team 1 vs Team 4' : 'Team 2 vs Team 3';
+      }
+    };
+
+    // Drag and drop handlers
+    const handleDragStart = (e, playerName) => {
+      e.dataTransfer.setData('text/plain', playerName);
+      e.dataTransfer.effectAllowed = 'move';
+    };
+
+    const handleDragOver = (e) => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+    };
+
+    const handleDrop = (e, teamIndex, position) => {
+      e.preventDefault();
+      const playerName = e.dataTransfer.getData('text/plain');
+      
+      // Remove player from current position
+      const updatedTeams = resultsModal.teams.map(team => ({
+        player1: team.player1 === playerName ? '' : team.player1,
+        player2: team.player2 === playerName ? '' : team.player2
+      }));
+
+      // Add player to new position
+      updatedTeams[teamIndex][position] = playerName;
+      
+      setResultsModal({ ...resultsModal, teams: updatedTeams });
+    };
+
+    const handleRemovePlayer = (playerName) => {
+      const updatedTeams = resultsModal.teams.map(team => ({
+        player1: team.player1 === playerName ? '' : team.player1,
+        player2: team.player2 === playerName ? '' : team.player2
+      }));
+      setResultsModal({ ...resultsModal, teams: updatedTeams });
+    };
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="bg-gray-600 text-white p-4 rounded-t-lg">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold">Record Match Results</h3>
+              <button
+                onClick={closeResultsModal}
+                className="text-gray-300 hover:text-white"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <p className="text-gray-300 text-sm mt-1">
+              {formatDate(match.date)} at {match.time}
+            </p>
+          </div>
+
+          <div className="p-6">
+            <div className="mb-8">
+              <h4 className="text-lg font-semibold mb-4">Available Players</h4>
+              <p className="text-sm text-gray-600 mb-4">
+                Drag players from this list into the teams below:
+              </p>
+              <div className="flex flex-wrap gap-2 p-4 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300 min-h-[60px]">
+                {unassignedPlayers.map((player, index) => (
+                  <div
+                    key={index}
+                    draggable
+                    onDragStart={(e) => handleDragStart(e, player)}
+                    className="bg-white px-3 py-2 rounded-md border border-gray-300 cursor-move hover:bg-gray-100 hover:border-gray-400 select-none shadow-sm"
+                  >
+                    {player}
+                  </div>
+                ))}
+                {unassignedPlayers.length === 0 && (
+                  <p className="text-gray-500 italic">All players have been assigned to teams</p>
+                )}
+              </div>
+            </div>
+
+            <div className="mb-8">
+              <h4 className="text-lg font-semibold mb-4">Teams</h4>
+              <div className="grid md:grid-cols-2 gap-4">
+                {resultsModal.teams.map((team, index) => (
+                  <div key={index} className="border border-gray-300 rounded-lg p-4 bg-white">
+                    <h5 className="font-medium mb-3">Team {index + 1}</h5>
+                    <div className="space-y-3">
+                      <div
+                        onDragOver={handleDragOver}
+                        onDrop={(e) => handleDrop(e, index, 'player1')}
+                        className="min-h-[50px] p-3 border-2 border-dashed border-gray-300 rounded-md hover:border-gray-400 hover:bg-gray-50 transition-colors"
+                      >
+                        {team.player1 ? (
+                          <div className="flex items-center justify-between bg-blue-100 px-3 py-2 rounded border border-blue-300">
+                            <span className="font-medium text-blue-900">{team.player1}</span>
+                            <button
+                              onClick={() => handleRemovePlayer(team.player1)}
+                              className="text-red-500 hover:text-red-700 ml-2"
+                              title="Remove player"
+                            >
+                              <X className="h-4 w-4" />
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center justify-center h-full text-gray-500 text-sm">
+                            Drop Player 1 here
+                          </div>
+                        )}
+                      </div>
+
+                      <div
+                        onDragOver={handleDragOver}
+                        onDrop={(e) => handleDrop(e, index, 'player2')}
+                        className="min-h-[50px] p-3 border-2 border-dashed border-gray-300 rounded-md hover:border-gray-400 hover:bg-gray-50 transition-colors"
+                      >
+                        {team.player2 ? (
+                          <div className="flex items-center justify-between bg-blue-100 px-3 py-2 rounded border border-blue-300">
+                            <span className="font-medium text-blue-900">{team.player2}</span>
+                            <button
+                              onClick={() => handleRemovePlayer(team.player2)}
+                              className="text-red-500 hover:text-red-700 ml-2"
+                              title="Remove player"
+                            >
+                              <X className="h-4 w-4" />
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center justify-center h-full text-gray-500 text-sm">
+                            Drop Player 2 here
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
             <div className="mb-6">
               <h4 className="text-lg font-semibold mb-4">Match Scores</h4>
               <p className="text-sm text-gray-600 mb-4">
@@ -6,7 +172,6 @@
               </p>
               
               <div className="space-y-6">
-                {/* Set 1 */}
                 <div className="border border-gray-300 rounded-lg p-4">
                   <h5 className="font-medium mb-3">Set 1</h5>
                   <div className="grid md:grid-cols-2 gap-4">
@@ -37,7 +202,6 @@
                   </div>
                 </div>
 
-                {/* Set 2 */}
                 <div className="border border-gray-300 rounded-lg p-4">
                   <h5 className="font-medium mb-3">Set 2</h5>
                   <div className="grid md:grid-cols-2 gap-4">
@@ -68,7 +232,6 @@
                   </div>
                 </div>
 
-                {/* Set 3 */}
                 <div className="border border-gray-300 rounded-lg p-4">
                   <h5 className="font-medium mb-3">Set 3</h5>
                   <div className="grid md:grid-cols-2 gap-4">
@@ -101,7 +264,6 @@
               </div>
             </div>
 
-            {/* Modal Actions */}
             <div className="flex space-x-3">
               <button
                 onClick={handleSaveResults}
