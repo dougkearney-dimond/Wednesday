@@ -638,9 +638,16 @@ const DimondTennisApp = () => {
     const unassignedPlayers = match.signups.slice(0, 8).filter(player => !assignedPlayers.has(player));
 
     const updateScore = (set, matchNum, value) => {
-      const updatedScores = { ...resultsModal.scores };
-      updatedScores[set][matchNum] = value;
-      setResultsModal({ ...resultsModal, scores: updatedScores });
+      setResultsModal(prev => ({
+        ...prev,
+        scores: {
+          ...prev.scores,
+          [set]: {
+            ...prev.scores[set],
+            [matchNum]: value
+          }
+        }
+      }));
     };
 
     const getMatchupText = (set, matchNum) => {
