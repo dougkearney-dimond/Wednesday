@@ -1,289 +1,4 @@
-// Results Modal Component
-  const ResultsModal = () => {
-    if (!resultsModal.isOpen) return null;
-
-    const match = archivedMatches.find(m => m.id === resultsModal.matchId);
-    if (!match) return null;
-
-    // Get assigned players
-    const assignedPlayers = new Set();
-    resultsModal.teams.forEach(team => {
-      if (team.player1) assignedPlayers.add(team.player1);
-      if (team.player2) assignedPlayers.add(team.player2);
-    });
-
-    // Get unassigned players
-    const unassignedPlayers = match.signups.slice(0, 8).filter(player => !assignedPlayers.has(player));
-
-    const updateScore = (set, matchNum, value) => {
-      const updatedScores = { ...resultsModal.scores };
-      updatedScores[set][matchNum] = value;
-      setResultsModal({ ...resultsModal, scores: updatedScores });
-    };
-
-    const getMatchupText = (set, matchNum) => {
-      if (set === 'set1') {
-        return matchNum === 'match1' ? 'Team 1 vs Team 2' : 'Team 3 vs Team 4';
-      } else if (set === 'set2') {
-        return matchNum === 'match1' ? 'Team 1 vs Team 3' : 'Team 2 vs Team 4';
-      } else {
-        return matchNum === 'match1' ? 'Team 1 vs Team 4' : 'Team 2 vs Team 3';
-      }
-    };
-
-    // Drag and drop handlers
-    const handleDragStart = (e, playerName) => {
-      e.dataTransfer.setData('text/plain', playerName);
-      e.dataTransfer.effectAllowed = 'move';
-    };
-
-    const handleDragOver = (e) => {
-      e.preventDefault();
-      e.dataTransfer.dropEffect = 'move';
-    };
-
-    const handleDrop = (e, teamIndex, position) => {
-      e.preventDefault();
-      const playerName = e.dataTransfer.getData('text/plain');
-      
-      // Remove player from current position
-      const updatedTeams = resultsModal.teams.map(team => ({
-        player1: team.player1 === playerName ? '' : team.player1,
-        player2: team.player2 === playerName ? '' : team.player2
-      }));
-
-      // Add player to new position
-      updatedTeams[teamIndex][position] = playerName;
-      
-      setResultsModal({ ...resultsModal, teams: updatedTeams });
-    };
-
-    const handleRemovePlayer = (playerName) => {
-      const updatedTeams = resultsModal.teams.map(team => ({
-        player1: team.player1 === playerName ? '' : team.player1,
-        player2: team.player2 === playerName ? '' : team.player2
-      }));
-      setResultsModal({ ...resultsModal, teams: updatedTeams });
-    };
-
-    return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-        <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-          <div className="bg-gray-600 text-white p-4 rounded-t-lg">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold">Record Match Results</h3>
-              <button
-                onClick={closeResultsModal}
-                className="text-gray-300 hover:text-white"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-            <p className="text-gray-300 text-sm mt-1">
-              {formatDate(match.date)} at {match.time}
-            </p>
-          </div>
-
-          <div className="p-6">
-            <div className="mb-8">
-              <h4 className="text-lg font-semibold mb-4">Available Players</h4>
-              <p className="text-sm text-gray-600 mb-4">
-                Drag players from this list into the teams below:
-              </p>
-              <div className="flex flex-wrap gap-2 p-4 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300 min-h-[60px]">
-                {unassignedPlayers.map((player, index) => (
-                  <div
-                    key={index}
-                    draggable
-                    onDragStart={(e) => handleDragStart(e, player)}
-                    className="bg-white px-3 py-2 rounded-md border border-gray-300 cursor-move hover:bg-gray-100 hover:border-gray-400 select-none shadow-sm"
-                  >
-                    {player}
-                  </div>
-                ))}
-                {unassignedPlayers.length === 0 && (
-                  <p className="text-gray-500 italic">All players have been assigned to teams</p>
-                )}
-              </div>
-            </div>
-
-            <div className="mb-8">
-              <h4 className="text-lg font-semibold mb-4">Teams</h4>
-              <div className="grid md:grid-cols-2 gap-4">
-                {resultsModal.teams.map((team, index) => (
-                  <div key={index} className="border border-gray-300 rounded-lg p-4 bg-white">
-                    <h5 className="font-medium mb-3">Team {index + 1}</h5>
-                    <div className="space-y-3">
-                      <div
-                        onDragOver={handleDragOver}
-                        onDrop={(e) => handleDrop(e, index, 'player1')}
-                        className="min-h-[50px] p-3 border-2 border-dashed border-gray-300 rounded-md hover:border-gray-400 hover:bg-gray-50 transition-colors"
-                      >
-                        {team.player1 ? (
-                          <div className="flex items-center justify-between bg-blue-100 px-3 py-2 rounded border border-blue-300">
-                            <span className="font-medium text-blue-900">{team.player1}</span>
-                            <button
-                              onClick={() => handleRemovePlayer(team.player1)}
-                              className="text-red-500 hover:text-red-700 ml-2"
-                              title="Remove player"
-                            >
-                              <X className="h-4 w-4" />
-                            </button>
-                          </div>
-                        ) : (
-                          <div className="flex items-center justify-center h-full text-gray-500 text-sm">
-                            Drop Player 1 here
-                          </div>
-                        )}
-                      </div>
-
-                      <div
-                        onDragOver={handleDragOver}
-                        onDrop={(e) => handleDrop(e, index, 'player2')}
-                        className="min-h-[50px] p-3 border-2 border-dashed border-gray-300 rounded-md hover:border-gray-400 hover:bg-gray-50 transition-colors"
-                      >
-                        {team.player2 ? (
-                          <div className="flex items-center justify-between bg-blue-100 px-3 py-2 rounded border border-blue-300">
-                            <span className="font-medium text-blue-900">{team.player2}</span>
-                            <button
-                              onClick={() => handleRemovePlayer(team.player2)}
-                              className="text-red-500 hover:text-red-700 ml-2"
-                              title="Remove player"
-                            >
-                              <X className="h-4 w-4" />
-                            </button>
-                          </div>
-                        ) : (
-                          <div className="flex items-center justify-center h-full text-gray-500 text-sm">
-                            Drop Player 2 here
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="mb-6">
-              <h4 className="text-lg font-semibold mb-4">Match Scores</h4>
-              <p className="text-sm text-gray-600 mb-4">
-                Each team plays one set against each other team. Enter scores as "6-4", "7-5", etc.
-              </p>
-              
-              <div className="space-y-6">
-                <div className="border border-gray-300 rounded-lg p-4">
-                  <h5 className="font-medium mb-3">Set 1</h5>
-                  <div className="grid md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        {getMatchupText('set1', 'match1')}
-                      </label>
-                      <input
-                        type="text"
-                        value={resultsModal.scores.set1.match1}
-                        onChange={(e) => updateScore('set1', 'match1', e.target.value)}
-                        placeholder="e.g., 6-4"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        {getMatchupText('set1', 'match2')}
-                      </label>
-                      <input
-                        type="text"
-                        value={resultsModal.scores.set1.match2}
-                        onChange={(e) => updateScore('set1', 'match2', e.target.value)}
-                        placeholder="e.g., 6-3"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="border border-gray-300 rounded-lg p-4">
-                  <h5 className="font-medium mb-3">Set 2</h5>
-                  <div className="grid md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        {getMatchupText('set2', 'match1')}
-                      </label>
-                      <input
-                        type="text"
-                        value={resultsModal.scores.set2.match1}
-                        onChange={(e) => updateScore('set2', 'match1', e.target.value)}
-                        placeholder="e.g., 4-6"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        {getMatchupText('set2', 'match2')}
-                      </label>
-                      <input
-                        type="text"
-                        value={resultsModal.scores.set2.match2}
-                        onChange={(e) => updateScore('set2', 'match2', e.target.value)}
-                        placeholder="e.g., 6-2"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="border border-gray-300 rounded-lg p-4">
-                  <h5 className="font-medium mb-3">Set 3</h5>
-                  <div className="grid md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        {getMatchupText('set3', 'match1')}
-                      </label>
-                      <input
-                        type="text"
-                        value={resultsModal.scores.set3.match1}
-                        onChange={(e) => updateScore('set3', 'match1', e.target.value)}
-                        placeholder="e.g., 7-5"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        {getMatchupText('set3', 'match2')}
-                      </label>
-                      <input
-                        type="text"
-                        value={resultsModal.scores.set3.match2}
-                        onChange={(e) => updateScore('set3', 'match2', e.target.value)}
-                        placeholder="e.g., 3-6"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500"
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex space-x-3">
-              <button
-                onClick={handleSaveResults}
-                disabled={loading}
-                className="flex-1 bg-gray-600 text-white py-2 px-4 rounded-md hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
-              >
-                {loading ? 'Saving...' : 'Save Results'}
-              </button>
-              <button
-                onClick={closeResultsModal}
-                className="flex-1 bg-gray-200 text-gray-800 py-2 px-4 rounded-md hover:bg-gray-300 font-medium"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  };import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Calendar, Clock, Trash2, Plus, AlertCircle, ExternalLink, User, X, Archive } from 'lucide-react';
 
 // Airtable Configuration - Using secure environment variables
@@ -342,9 +57,9 @@ const DimondTennisApp = () => {
       { player1: '', player2: '' }
     ],
     scores: {
-      set1: { match1: '', match2: '' }, // Team1 vs Team2, Team3 vs Team4
-      set2: { match1: '', match2: '' }, // Team1 vs Team3, Team2 vs Team4  
-      set3: { match1: '', match2: '' }  // Team1 vs Team4, Team2 vs Team3
+      set1: { match1: '', match2: '' },
+      set2: { match1: '', match2: '' },
+      set3: { match1: '', match2: '' }
     }
   });
   
@@ -353,6 +68,27 @@ const DimondTennisApp = () => {
     time: '',
     organizer: ''
   });
+
+  // Helper functions
+  const formatDate = (dateString) => {
+    const [year, month, day] = dateString.split('-').map(Number);
+    const date = new Date(year, month - 1, day);
+    return date.toLocaleDateString('en-US', { 
+      weekday: 'long', 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    });
+  };
+
+  const formatShortDate = (dateString) => {
+    const [year, month, day] = dateString.split('-').map(Number);
+    const date = new Date(year, month - 1, day);
+    return date.toLocaleDateString('en-US', { 
+      month: 'short', 
+      day: 'numeric' 
+    });
+  };
 
   // Check if a match should be archived (day after it occurred)
   const shouldArchiveMatch = (matchDate) => {
@@ -365,116 +101,48 @@ const DimondTennisApp = () => {
     return today >= dayAfterMatch;
   };
 
-  // Load matches when authenticated
-  useEffect(() => {
-    if (!isAuthenticated) return;
-
-    console.log('useEffect starting - authenticated');
-
-    // Simple auth test first
-    const testAuth = async () => {
-      try {
-        console.log('Testing Airtable authentication...');
-        const response = await fetch(`https://api.airtable.com/v0/meta/bases`, {
-          headers: {
-            'Authorization': `Bearer ${AIRTABLE_API_KEY}`
-          }
-        });
-        
-        console.log('Auth test response status:', response.status);
-        if (response.ok) {
-          console.log('✅ Authentication working!');
-        } else {
-          const errorData = await response.json();
-          console.error('❌ Authentication failed:', errorData);
-        }
-      } catch (error) {
-        console.error('Auth test error:', error);
+  const getAvailableWednesdays = () => {
+    const availableWednesdays = [];
+    const organizedDates = organizedMatches.map(match => match.date);
+    const today = new Date();
+    let currentDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    
+    // Find the next Wednesday
+    while (currentDate.getDay() !== 3) {
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+    
+    // If today is already Wednesday, move to next Wednesday
+    if (today.getDay() === 3 && today.getHours() > 12) {
+      currentDate.setDate(currentDate.getDate() + 7);
+    }
+    
+    // Keep generating Wednesdays until we have 4 available ones
+    let weekOffset = 0;
+    while (availableWednesdays.length < 4) {
+      const wednesday = new Date(currentDate);
+      wednesday.setDate(currentDate.getDate() + (weekOffset * 7));
+      
+      const year = wednesday.getFullYear();
+      const month = String(wednesday.getMonth() + 1).padStart(2, '0');
+      const day = String(wednesday.getDate()).padStart(2, '0');
+      const dateString = `${year}-${month}-${day}`;
+      
+      // Only add if not already organized
+      if (!organizedDates.includes(dateString)) {
+        availableWednesdays.push(dateString);
       }
-    };
+      
+      weekOffset++;
+      
+      // Safety break to prevent infinite loop (shouldn't happen in normal use)
+      if (weekOffset > 52) break;
+    }
+    
+    return availableWednesdays;
+  };
 
-    // Fetch matches from Airtable - moved inside useEffect to avoid dependency issues
-    const fetchMatches = async () => {
-      try {
-        console.log('Starting to fetch matches...');
-        setLoading(true);
-        const response = await fetch(`${airtableUrl}?sort%5B0%5D%5Bfield%5D=Date&sort%5B0%5D%5Bdirection%5D=asc`, {
-          headers: airtableHeaders
-        });
-        
-        console.log('Fetch response status:', response.status);
-        
-        if (!response.ok) {
-          const errorData = await response.json();
-          console.error('Fetch matches error:', errorData);
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
-        const data = await response.json();
-        console.log('Raw data received:', data);
-        
-        const matches = data.records.map(record => {
-          let teams = null;
-          let scores = null;
-          
-          // Safely parse Teams field
-          try {
-            if (record.fields.Teams) {
-              teams = JSON.parse(record.fields.Teams);
-            }
-          } catch (error) {
-            console.log('Error parsing Teams field for record:', record.id);
-          }
-          
-          // Safely parse Scores field  
-          try {
-            if (record.fields.Scores) {
-              scores = JSON.parse(record.fields.Scores);
-            }
-          } catch (error) {
-            console.log('Error parsing Scores field for record:', record.id);
-          }
-          
-          return {
-            id: record.id,
-            date: record.fields.Date || '',
-            time: record.fields.Time || '',
-            organizer: record.fields.Organizer || '',
-            signups: record.fields.Signups ? record.fields.Signups.split('\n').filter(s => s.trim()) : [],
-            teams: teams,
-            scores: scores
-          };
-        });
-        
-        // Separate current and archived matches
-        const currentMatches = matches.filter(match => !shouldArchiveMatch(match.date));
-        const pastMatches = matches.filter(match => shouldArchiveMatch(match.date));
-        
-        console.log('=== MATCHES DEBUG ===');
-        console.log('Total matches loaded:', matches.length);
-        console.log('Current matches:', currentMatches.length);
-        console.log('Archived matches:', pastMatches.length);
-        console.log('Sample archived match:', pastMatches[0]);
-        console.log('==================');
-        
-        setOrganizedMatches(currentMatches);
-        setArchivedMatches(pastMatches);
-        setLoading(false);
-      } catch (error) {
-        console.error('Error fetching matches:', error);
-        alert('Error loading matches. Please check your internet connection and try again.');
-        setLoading(false);
-      }
-    };
-
-    console.log('About to call testAuth()');
-    testAuth();
-
-    console.log('About to call fetchMatches()');
-    fetchMatches();
-  }, [isAuthenticated]);
-
-  // Separate fetchMatches function for use in other parts of the component
+  // Data fetching functions
   const refetchMatches = async () => {
     try {
       setLoading(true);
@@ -541,7 +209,7 @@ const DimondTennisApp = () => {
     }
   };
 
-  // Password authentication
+  // Event handlers
   const handleLogin = () => {
     const passwordValue = passwordRef.current?.value || '';
     if (passwordValue === '2025') {
@@ -553,7 +221,6 @@ const DimondTennisApp = () => {
     }
   };
 
-  // Add new match to Airtable
   const addMatch = async () => {
     if (newMatch.date && newMatch.time && newMatch.organizer) {
       try {
@@ -564,11 +231,11 @@ const DimondTennisApp = () => {
             Date: newMatch.date,
             Time: newMatch.time,
             Organizer: newMatch.organizer,
-            Signups: newMatch.organizer // Organizer automatically signs up
+            Signups: newMatch.organizer
           }
         };
 
-        console.log('Sending to Airtable:', matchData); // Debug log
+        console.log('Sending to Airtable:', matchData);
 
         const response = await fetch(airtableUrl, {
           method: 'POST',
@@ -576,20 +243,20 @@ const DimondTennisApp = () => {
           body: JSON.stringify(matchData)
         });
 
-        console.log('Response status:', response.status); // Debug log
+        console.log('Response status:', response.status);
 
         if (!response.ok) {
           const errorData = await response.json();
-          console.error('Airtable error response:', errorData); // Debug log
+          console.error('Airtable error response:', errorData);
           throw new Error(`HTTP error! status: ${response.status}, message: ${JSON.stringify(errorData)}`);
         }
 
         const responseData = await response.json();
-        console.log('Success response:', responseData); // Debug log
+        console.log('Success response:', responseData);
 
         setNewMatch({ date: '', time: '', organizer: '' });
         setCurrentView('matches');
-        await refetchMatches(); // Refresh the matches list
+        await refetchMatches();
       } catch (error) {
         console.error('Error adding match:', error);
         alert(`Error creating match: ${error.message}\n\nCheck the browser console for details.`);
@@ -598,17 +265,14 @@ const DimondTennisApp = () => {
     }
   };
 
-  // Open signup modal
   const openSignupModal = (matchId) => {
     setSignupModal({ isOpen: true, matchId, playerName: '' });
   };
 
-  // Close signup modal
   const closeSignupModal = () => {
     setSignupModal({ isOpen: false, matchId: null, playerName: '' });
   };
 
-  // Open results modal
   const openResultsModal = (matchId) => {
     const match = archivedMatches.find(m => m.id === matchId);
     if (match) {
@@ -630,7 +294,6 @@ const DimondTennisApp = () => {
     }
   };
 
-  // Close results modal
   const closeResultsModal = () => {
     setResultsModal({
       isOpen: false,
@@ -649,7 +312,6 @@ const DimondTennisApp = () => {
     });
   };
 
-  // Handle signup from modal
   const handleSignupFromModal = async () => {
     const { matchId, playerName } = signupModal;
     
@@ -678,7 +340,7 @@ const DimondTennisApp = () => {
         }
 
         closeSignupModal();
-        await refetchMatches(); // Refresh the matches list
+        await refetchMatches();
       } else if (match && match.signups.includes(playerName.trim())) {
         alert('You are already signed up for this match!');
       }
@@ -688,7 +350,6 @@ const DimondTennisApp = () => {
     }
   };
 
-  // Save results from modal
   const handleSaveResults = async () => {
     try {
       setLoading(true);
@@ -709,7 +370,7 @@ const DimondTennisApp = () => {
       }
 
       closeResultsModal();
-      await refetchMatches(); // Refresh the matches list
+      await refetchMatches();
       setLoading(false);
     } catch (error) {
       console.error('Error saving results:', error);
@@ -718,7 +379,6 @@ const DimondTennisApp = () => {
     }
   };
 
-  // Cancel signup
   const cancelSignup = async (matchId, playerToRemove) => {
     const isConfirmed = window.confirm(
       `Are you sure you want to remove "${playerToRemove}" from this match?`
@@ -745,7 +405,7 @@ const DimondTennisApp = () => {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
 
-        await refetchMatches(); // Refresh the matches list
+        await refetchMatches();
       }
     } catch (error) {
       console.error('Error canceling signup:', error);
@@ -753,7 +413,6 @@ const DimondTennisApp = () => {
     }
   };
 
-  // Delete entire match
   const deleteMatch = async (matchId) => {
     const isConfirmed = window.confirm(
       'Are you sure you want to delete this entire match? This cannot be undone.'
@@ -771,14 +430,118 @@ const DimondTennisApp = () => {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      await refetchMatches(); // Refresh the matches list
+      await refetchMatches();
     } catch (error) {
       console.error('Error deleting match:', error);
       alert('Error deleting match. Please try again.');
     }
   };
 
-  // Signup Modal Component
+  // Load matches when authenticated
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    console.log('useEffect starting - authenticated');
+
+    const testAuth = async () => {
+      try {
+        console.log('Testing Airtable authentication...');
+        const response = await fetch(`https://api.airtable.com/v0/meta/bases`, {
+          headers: {
+            'Authorization': `Bearer ${AIRTABLE_API_KEY}`
+          }
+        });
+        
+        console.log('Auth test response status:', response.status);
+        if (response.ok) {
+          console.log('✅ Authentication working!');
+        } else {
+          const errorData = await response.json();
+          console.error('❌ Authentication failed:', errorData);
+        }
+      } catch (error) {
+        console.error('Auth test error:', error);
+      }
+    };
+
+    const fetchMatches = async () => {
+      try {
+        console.log('Starting to fetch matches...');
+        setLoading(true);
+        const response = await fetch(`${airtableUrl}?sort%5B0%5D%5Bfield%5D=Date&sort%5B0%5D%5Bdirection%5D=asc`, {
+          headers: airtableHeaders
+        });
+        
+        console.log('Fetch response status:', response.status);
+        
+        if (!response.ok) {
+          const errorData = await response.json();
+          console.error('Fetch matches error:', errorData);
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        console.log('Raw data received:', data);
+        
+        const matches = data.records.map(record => {
+          let teams = null;
+          let scores = null;
+          
+          try {
+            if (record.fields.Teams) {
+              teams = JSON.parse(record.fields.Teams);
+            }
+          } catch (error) {
+            console.log('Error parsing Teams field for record:', record.id);
+          }
+          
+          try {
+            if (record.fields.Scores) {
+              scores = JSON.parse(record.fields.Scores);
+            }
+          } catch (error) {
+            console.log('Error parsing Scores field for record:', record.id);
+          }
+          
+          return {
+            id: record.id,
+            date: record.fields.Date || '',
+            time: record.fields.Time || '',
+            organizer: record.fields.Organizer || '',
+            signups: record.fields.Signups ? record.fields.Signups.split('\n').filter(s => s.trim()) : [],
+            teams: teams,
+            scores: scores
+          };
+        });
+        
+        const currentMatches = matches.filter(match => !shouldArchiveMatch(match.date));
+        const pastMatches = matches.filter(match => shouldArchiveMatch(match.date));
+        
+        console.log('=== MATCHES DEBUG ===');
+        console.log('Total matches loaded:', matches.length);
+        console.log('Current matches:', currentMatches.length);
+        console.log('Archived matches:', pastMatches.length);
+        console.log('Sample archived match:', pastMatches[0]);
+        console.log('==================');
+        
+        setOrganizedMatches(currentMatches);
+        setArchivedMatches(pastMatches);
+        setLoading(false);
+      } catch (error) {
+        console.error('Error fetching matches:', error);
+        alert('Error loading matches. Please check your internet connection and try again.');
+        setLoading(false);
+      }
+    };
+
+    console.log('About to call testAuth()');
+    testAuth();
+
+    console.log('About to call fetchMatches()');
+    fetchMatches();
+  }, [isAuthenticated]);
+
+  // Component definitions
   const SignupModal = () => {
     if (!signupModal.isOpen) return null;
 
@@ -790,7 +553,6 @@ const DimondTennisApp = () => {
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
         <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
-          {/* Modal Header */}
           <div className="bg-black text-white p-4 rounded-t-lg">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-semibold">Sign Up for Match</h3>
@@ -806,7 +568,6 @@ const DimondTennisApp = () => {
             </p>
           </div>
 
-          {/* Modal Body */}
           <div className="p-6">
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -823,7 +584,6 @@ const DimondTennisApp = () => {
               />
             </div>
 
-            {/* Current signups preview */}
             <div className="mb-4">
               <p className="text-sm text-gray-600 mb-2">
                 Current signups: {match.signups.length}/8
@@ -840,7 +600,6 @@ const DimondTennisApp = () => {
               )}
             </div>
 
-            {/* Modal Actions */}
             <div className="flex space-x-3">
               <button
                 onClick={handleSignupFromModal}
@@ -862,7 +621,6 @@ const DimondTennisApp = () => {
     );
   };
 
-  // Results Modal Component
   const ResultsModal = () => {
     if (!resultsModal.isOpen) return null;
 
@@ -879,12 +637,6 @@ const DimondTennisApp = () => {
     // Get unassigned players
     const unassignedPlayers = match.signups.slice(0, 8).filter(player => !assignedPlayers.has(player));
 
-    const updateTeam = (teamIndex, field, value) => {
-      const updatedTeams = [...resultsModal.teams];
-      updatedTeams[teamIndex][field] = value;
-      setResultsModal({ ...resultsModal, teams: updatedTeams });
-    };
-
     const updateScore = (set, matchNum, value) => {
       const updatedScores = { ...resultsModal.scores };
       updatedScores[set][matchNum] = value;
@@ -896,12 +648,11 @@ const DimondTennisApp = () => {
         return matchNum === 'match1' ? 'Team 1 vs Team 2' : 'Team 3 vs Team 4';
       } else if (set === 'set2') {
         return matchNum === 'match1' ? 'Team 1 vs Team 3' : 'Team 2 vs Team 4';
-      } else { // set3
+      } else {
         return matchNum === 'match1' ? 'Team 1 vs Team 4' : 'Team 2 vs Team 3';
       }
     };
 
-    // Drag and drop handlers
     const handleDragStart = (e, playerName) => {
       e.dataTransfer.setData('text/plain', playerName);
       e.dataTransfer.effectAllowed = 'move';
@@ -916,13 +667,11 @@ const DimondTennisApp = () => {
       e.preventDefault();
       const playerName = e.dataTransfer.getData('text/plain');
       
-      // Remove player from current position
       const updatedTeams = resultsModal.teams.map(team => ({
         player1: team.player1 === playerName ? '' : team.player1,
         player2: team.player2 === playerName ? '' : team.player2
       }));
 
-      // Add player to new position
       updatedTeams[teamIndex][position] = playerName;
       
       setResultsModal({ ...resultsModal, teams: updatedTeams });
@@ -939,7 +688,6 @@ const DimondTennisApp = () => {
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
         <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-          {/* Modal Header */}
           <div className="bg-gray-600 text-white p-4 rounded-t-lg">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-semibold">Record Match Results</h3>
@@ -955,9 +703,7 @@ const DimondTennisApp = () => {
             </p>
           </div>
 
-          {/* Modal Body */}
           <div className="p-6">
-            {/* Available Players Section */}
             <div className="mb-8">
               <h4 className="text-lg font-semibold mb-4">Available Players</h4>
               <p className="text-sm text-gray-600 mb-4">
@@ -980,7 +726,6 @@ const DimondTennisApp = () => {
               </div>
             </div>
 
-            {/* Teams Section */}
             <div className="mb-8">
               <h4 className="text-lg font-semibold mb-4">Teams</h4>
               <div className="grid md:grid-cols-2 gap-4">
@@ -988,7 +733,6 @@ const DimondTennisApp = () => {
                   <div key={index} className="border border-gray-300 rounded-lg p-4 bg-white">
                     <h5 className="font-medium mb-3">Team {index + 1}</h5>
                     <div className="space-y-3">
-                      {/* Player 1 Drop Zone */}
                       <div
                         onDragOver={handleDragOver}
                         onDrop={(e) => handleDrop(e, index, 'player1')}
@@ -1012,7 +756,6 @@ const DimondTennisApp = () => {
                         )}
                       </div>
 
-                      {/* Player 2 Drop Zone */}
                       <div
                         onDragOver={handleDragOver}
                         onDrop={(e) => handleDrop(e, index, 'player2')}
@@ -1041,7 +784,6 @@ const DimondTennisApp = () => {
               </div>
             </div>
 
-            {/* Scores Section */}
             <div className="mb-6">
               <h4 className="text-lg font-semibold mb-4">Match Scores</h4>
               <p className="text-sm text-gray-600 mb-4">
@@ -1049,7 +791,6 @@ const DimondTennisApp = () => {
               </p>
               
               <div className="space-y-6">
-                {/* Set 1 */}
                 <div className="border border-gray-300 rounded-lg p-4">
                   <h5 className="font-medium mb-3">Set 1</h5>
                   <div className="grid md:grid-cols-2 gap-4">
@@ -1080,7 +821,6 @@ const DimondTennisApp = () => {
                   </div>
                 </div>
 
-                {/* Set 2 */}
                 <div className="border border-gray-300 rounded-lg p-4">
                   <h5 className="font-medium mb-3">Set 2</h5>
                   <div className="grid md:grid-cols-2 gap-4">
@@ -1111,7 +851,6 @@ const DimondTennisApp = () => {
                   </div>
                 </div>
 
-                {/* Set 3 */}
                 <div className="border border-gray-300 rounded-lg p-4">
                   <h5 className="font-medium mb-3">Set 3</h5>
                   <div className="grid md:grid-cols-2 gap-4">
@@ -1144,7 +883,6 @@ const DimondTennisApp = () => {
               </div>
             </div>
 
-            {/* Modal Actions */}
             <div className="flex space-x-3">
               <button
                 onClick={handleSaveResults}
@@ -1166,10 +904,8 @@ const DimondTennisApp = () => {
     );
   };
 
-  // Match Card Component (reusable for current and archived matches)
   const MatchCard = ({ match, isArchived = false }) => (
     <div key={match.id} className="bg-white rounded-lg shadow-md overflow-hidden">
-      {/* Match Header */}
       <div className={`${isArchived ? 'bg-gray-600' : 'bg-black'} text-white p-4`}>
         <div className="flex items-center justify-between">
           <div>
@@ -1212,7 +948,6 @@ const DimondTennisApp = () => {
         </div>
       </div>
 
-      {/* Sign Up Button */}
       {!isArchived && (
         <div className="p-4 border-b bg-gray-50">
           <button
@@ -1225,12 +960,10 @@ const DimondTennisApp = () => {
         </div>
       )}
 
-      {/* Match Results for Archived Matches */}
       {isArchived && match.teams && match.scores && (
         <div className="p-4 border-b bg-blue-50">
           <h4 className="font-medium text-gray-900 mb-3">Match Results</h4>
           
-          {/* Teams */}
           <div className="grid grid-cols-2 gap-2 mb-4">
             {match.teams.map((team, index) => (
               <div key={index} className="text-sm">
@@ -1239,7 +972,6 @@ const DimondTennisApp = () => {
             ))}
           </div>
 
-          {/* Scores */}
           <div className="space-y-2 text-sm">
             <div>
               <span className="font-medium">Set 1:</span> 
@@ -1260,10 +992,8 @@ const DimondTennisApp = () => {
         </div>
       )}
 
-      {/* Players List */}
       <div className="p-4">
         <div className="space-y-4">
-          {/* Confirmed Players */}
           <div>
             <h4 className="font-medium text-gray-900 mb-3 flex items-center">
               Confirmed Players
@@ -1305,7 +1035,6 @@ const DimondTennisApp = () => {
             </div>
           </div>
 
-          {/* Waiting List */}
           {match.signups.length > 8 && (
             <div>
               <h4 className="font-medium text-gray-900 mb-3 flex items-center">
@@ -1341,7 +1070,6 @@ const DimondTennisApp = () => {
     </div>
   );
 
-  // Login form component
   const LoginForm = () => (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center">
       <div className="max-w-md w-full bg-white rounded-lg shadow-md p-8">
@@ -1387,71 +1115,9 @@ const DimondTennisApp = () => {
     </div>
   );
 
-  // Return login form if not authenticated
   if (!isAuthenticated) {
     return <LoginForm />;
   }
-
-  const formatDate = (dateString) => {
-    const [year, month, day] = dateString.split('-').map(Number);
-    const date = new Date(year, month - 1, day);
-    return date.toLocaleDateString('en-US', { 
-      weekday: 'long', 
-      year: 'numeric', 
-      month: 'long', 
-      day: 'numeric' 
-    });
-  };
-
-  const formatShortDate = (dateString) => {
-    const [year, month, day] = dateString.split('-').map(Number);
-    const date = new Date(year, month - 1, day);
-    return date.toLocaleDateString('en-US', { 
-      month: 'short', 
-      day: 'numeric' 
-    });
-  };
-
-  const getAvailableWednesdays = () => {
-    const availableWednesdays = [];
-    const organizedDates = organizedMatches.map(match => match.date);
-    const today = new Date();
-    let currentDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-    
-    // Find the next Wednesday
-    while (currentDate.getDay() !== 3) {
-      currentDate.setDate(currentDate.getDate() + 1);
-    }
-    
-    // If today is already Wednesday, move to next Wednesday
-    if (today.getDay() === 3 && today.getHours() > 12) {
-      currentDate.setDate(currentDate.getDate() + 7);
-    }
-    
-    // Keep generating Wednesdays until we have 4 available ones
-    let weekOffset = 0;
-    while (availableWednesdays.length < 4) {
-      const wednesday = new Date(currentDate);
-      wednesday.setDate(currentDate.getDate() + (weekOffset * 7));
-      
-      const year = wednesday.getFullYear();
-      const month = String(wednesday.getMonth() + 1).padStart(2, '0');
-      const day = String(wednesday.getDate()).padStart(2, '0');
-      const dateString = `${year}-${month}-${day}`;
-      
-      // Only add if not already organized
-      if (!organizedDates.includes(dateString)) {
-        availableWednesdays.push(dateString);
-      }
-      
-      weekOffset++;
-      
-      // Safety break to prevent infinite loop (shouldn't happen in normal use)
-      if (weekOffset > 52) break;
-    }
-    
-    return availableWednesdays;
-  };
 
   if (loading) {
     return (
@@ -1466,7 +1132,6 @@ const DimondTennisApp = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
       <header className="bg-black text-white shadow-lg">
         <div className="max-w-6xl mx-auto px-4 py-6">
           <div className="flex items-center justify-between">
@@ -1490,7 +1155,6 @@ const DimondTennisApp = () => {
         </div>
       </header>
 
-      {/* Navigation */}
       <nav className="bg-white border-b">
         <div className="max-w-6xl mx-auto px-4">
           <div className="flex space-x-8 justify-center">
@@ -1531,7 +1195,6 @@ const DimondTennisApp = () => {
       <main className="max-w-6xl mx-auto px-4 py-6">
         {currentView === 'matches' && (
           <div>
-            {/* Info Section */}
             <div className="bg-white rounded-lg shadow-md p-6 mb-8">
               <div className="text-center">
                 <h2 className="text-xl font-semibold text-gray-900 mb-2">Wednesday Night Doubles</h2>
@@ -1539,7 +1202,6 @@ const DimondTennisApp = () => {
               </div>
             </div>
 
-            {/* Organized Matches */}
             {organizedMatches.length === 0 ? (
               <div className="text-center py-12">
                 <Calendar className="mx-auto h-12 w-12 text-gray-400 mb-4" />
@@ -1564,7 +1226,6 @@ const DimondTennisApp = () => {
 
         {currentView === 'archived' && (
           <div>
-            {/* Info Section */}
             <div className="bg-white rounded-lg shadow-md p-6 mb-8">
               <div className="text-center">
                 <h2 className="text-xl font-semibold text-gray-900 mb-2">Archived Matches</h2>
@@ -1572,7 +1233,6 @@ const DimondTennisApp = () => {
               </div>
             </div>
 
-            {/* Archived Matches */}
             {archivedMatches.length === 0 ? (
               <div className="text-center py-12">
                 <Archive className="mx-auto h-12 w-12 text-gray-400 mb-4" />
@@ -1596,7 +1256,6 @@ const DimondTennisApp = () => {
               <p className="text-gray-600">Reserve courts and let others know about your Wednesday match</p>
             </div>
 
-            {/* Court Reservation Info */}
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 max-w-2xl mx-auto">
               <h3 className="font-medium text-blue-900 mb-2 flex items-center">
                 <ExternalLink className="h-4 w-4 mr-2" />
@@ -1685,7 +1344,6 @@ const DimondTennisApp = () => {
           </div>
         )}
 
-        {/* Footer Info */}
         <div className="mt-12 bg-white rounded-lg shadow-md p-6">
           <div className="text-center">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">About Wednesday Night Doubles</h3>
@@ -1706,10 +1364,7 @@ const DimondTennisApp = () => {
         </div>
       </main>
 
-      {/* Signup Modal */}
       <SignupModal />
-
-      {/* Results Modal */}
       <ResultsModal />
     </div>
   );
