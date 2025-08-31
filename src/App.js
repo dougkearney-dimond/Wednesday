@@ -146,7 +146,7 @@ const DimondTennisApp = () => {
   const refetchMatches = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${airtableUrl}?sort%5B0%5D%5Bfield%5D=Date&sort%5B0%5D%5Bdirection%5D=desc`, {
+      const response = await fetch(`${airtableUrl}?sort%5B0%5D%5Bfield%5D=Date&sort%5B0%5D%5Bdirection%5D=asc`, {
         headers: airtableHeaders
       });
       
@@ -476,7 +476,7 @@ const DimondTennisApp = () => {
       try {
         console.log('Starting to fetch matches...');
         setLoading(true);
-        const response = await fetch(`${airtableUrl}?sort%5B0%5D%5Bfield%5D=Date&sort%5B0%5D%5Bdirection%5D=desc`, {
+        const response = await fetch(`${airtableUrl}?sort%5B0%5D%5Bfield%5D=Date&sort%5B0%5D%5Bdirection%5D=asc`, {
           headers: airtableHeaders
         });
         
