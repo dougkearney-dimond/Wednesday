@@ -527,6 +527,7 @@ const DimondTennisApp = () => {
         console.log('Total matches loaded:', matches.length);
         console.log('Current matches:', currentMatches.length);
         console.log('Archived matches:', pastMatches.length);
+        console.log('Archived dates order:', pastMatches.map(m => m.date));
         console.log('Sample archived match:', pastMatches[0]);
         console.log('==================');
         
