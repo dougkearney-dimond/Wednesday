@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Calendar, Clock, Trash2, Plus, AlertCircle, ExternalLink, User, X, Archive } from 'lucide-react';
 
-// Airtable Configuration - Using secure environment variables
-const AIRTABLE_API_KEY = process.env.REACT_APP_AIRTABLE_API_KEY || 'placeholder_api_key';
-const AIRTABLE_BASE_ID = process.env.REACT_APP_AIRTABLE_BASE_ID || 'placeholder_base_id';
+// Airtable Configuration
+// Note: In production, replace these with your actual Airtable credentials
+const AIRTABLE_API_KEY = 'placeholder_api_key'; // Replace with your actual API key
+const AIRTABLE_BASE_ID = 'placeholder_base_id'; // Replace with your actual base ID
 const AIRTABLE_TABLE_NAME = 'Matches';
 
-// Debug: Log the actual values being used (but mask the API key for security)
+// Debug: Log the configuration (but mask the API key for security)
 console.log('=== AIRTABLE DEBUG INFO ===');
 console.log('Base ID:', AIRTABLE_BASE_ID);
 console.log('Table Name:', AIRTABLE_TABLE_NAME);
@@ -14,10 +15,6 @@ console.log('API Key starts with:', AIRTABLE_API_KEY.substring(0, 8) + '...');
 console.log('Full URL:', `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${AIRTABLE_TABLE_NAME}`);
 console.log('Has API Key:', !!AIRTABLE_API_KEY && AIRTABLE_API_KEY !== 'placeholder_api_key');
 console.log('Has Base ID:', !!AIRTABLE_BASE_ID && AIRTABLE_BASE_ID !== 'placeholder_base_id');
-console.log('Environment variables loaded:', {
-  'REACT_APP_AIRTABLE_API_KEY': !!process.env.REACT_APP_AIRTABLE_API_KEY,
-  'REACT_APP_AIRTABLE_BASE_ID': !!process.env.REACT_APP_AIRTABLE_BASE_ID
-});
 
 // Test different table names
 console.log('Testing URLs:');
@@ -99,6 +96,31 @@ const DimondTennisApp = () => {
     
     // Archive if today is the day after the match or later
     return today >= dayAfterMatch;
+  };
+
+  // Sort matches by proximity to today
+  const sortByProximityToToday = (matches) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Reset time to start of day for consistent comparison
+    
+    return matches.sort((a, b) => {
+      const dateA = new Date(a.date);
+      const dateB = new Date(b.date);
+      dateA.setHours(0, 0, 0, 0);
+      dateB.setHours(0, 0, 0, 0);
+      
+      // Calculate absolute difference in days from today
+      const diffA = Math.abs(dateA - today);
+      const diffB = Math.abs(dateB - today);
+      
+      // Sort by smallest difference first (closest to today)
+      if (diffA !== diffB) {
+        return diffA - diffB;
+      }
+      
+      // If same distance from today, prefer future dates over past dates
+      return dateB - dateA;
+    });
   };
 
   const getAvailableWednesdays = () => {
@@ -189,26 +211,22 @@ const DimondTennisApp = () => {
         };
       });
       
-      // Separate current and archived matches with explicit sorting
+      // Separate current and archived matches
       const currentMatches = matches.filter(match => !shouldArchiveMatch(match.date));
       const pastMatches = matches.filter(match => shouldArchiveMatch(match.date));
       
-      // Force reverse order for archived matches
-      pastMatches.sort((a, b) => {
-        // Simple string comparison, but reversed for newest first
-        if (a.date > b.date) return -1; // a is newer, put it first
-        if (a.date < b.date) return 1;  // b is newer, put b first
-        return 0; // same date
-      });
+      // Sort both lists by proximity to today
+      const sortedCurrentMatches = sortByProximityToToday([...currentMatches]);
+      const sortedArchivedMatches = sortByProximityToToday([...pastMatches]);
       
       console.log('=== REFETCH MATCHES DEBUG ===');
       console.log('Total matches loaded:', matches.length);
-      console.log('Current matches:', currentMatches.length);
-      console.log('Archived matches:', pastMatches.length);
+      console.log('Current matches:', sortedCurrentMatches.length);
+      console.log('Archived matches:', sortedArchivedMatches.length);
       console.log('==================');
       
-      setOrganizedMatches(currentMatches);
-      setArchivedMatches(pastMatches);
+      setOrganizedMatches(sortedCurrentMatches);
+      setArchivedMatches(sortedArchivedMatches);
       setLoading(false);
     } catch (error) {
       console.error('Error fetching matches:', error);
@@ -522,19 +540,24 @@ const DimondTennisApp = () => {
           };
         });
         
+        // Separate current and archived matches
         const currentMatches = matches.filter(match => !shouldArchiveMatch(match.date));
         const pastMatches = matches.filter(match => shouldArchiveMatch(match.date));
         
+        // Sort both lists by proximity to today
+        const sortedCurrentMatches = sortByProximityToToday([...currentMatches]);
+        const sortedArchivedMatches = sortByProximityToToday([...pastMatches]);
+        
         console.log('=== MATCHES DEBUG ===');
         console.log('Total matches loaded:', matches.length);
-        console.log('Current matches:', currentMatches.length);
-        console.log('Archived matches:', pastMatches.length);
-        console.log('Archived dates order:', pastMatches.map(m => m.date));
-        console.log('Sample archived match:', pastMatches[0]);
+        console.log('Current matches:', sortedCurrentMatches.length);
+        console.log('Archived matches:', sortedArchivedMatches.length);
+        console.log('Archived dates order:', sortedArchivedMatches.map(m => m.date));
+        console.log('Sample archived match:', sortedArchivedMatches[0]);
         console.log('==================');
         
-        setOrganizedMatches(currentMatches);
-        setArchivedMatches(pastMatches);
+        setOrganizedMatches(sortedCurrentMatches);
+        setArchivedMatches(sortedArchivedMatches);
         setLoading(false);
       } catch (error) {
         console.error('Error fetching matches:', error);
