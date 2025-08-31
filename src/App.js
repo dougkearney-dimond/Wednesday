@@ -189,14 +189,16 @@ const DimondTennisApp = () => {
         };
       });
       
-      // Separate current and archived matches
+      // Separate current and archived matches with explicit sorting
       const currentMatches = matches.filter(match => !shouldArchiveMatch(match.date));
-      const archivedUnsorted = matches.filter(match => shouldArchiveMatch(match.date));
+      const pastMatches = matches.filter(match => shouldArchiveMatch(match.date));
       
-      const pastMatches = archivedUnsorted.sort((a, b) => {
-        const dateA = new Date(a.date);
-        const dateB = new Date(b.date);
-        return dateB.getTime() - dateA.getTime(); // Newest first
+      // Force reverse order for archived matches
+      pastMatches.sort((a, b) => {
+        // Simple string comparison, but reversed for newest first
+        if (a.date > b.date) return -1; // a is newer, put it first
+        if (a.date < b.date) return 1;  // b is newer, put b first
+        return 0; // same date
       });
       
       console.log('=== REFETCH MATCHES DEBUG ===');
