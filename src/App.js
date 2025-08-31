@@ -191,7 +191,9 @@ const DimondTennisApp = () => {
       
       // Separate current and archived matches
       const currentMatches = matches.filter(match => !shouldArchiveMatch(match.date));
-      const pastMatches = matches.filter(match => shouldArchiveMatch(match.date)).reverse();
+      const pastMatches = matches
+        .filter(match => shouldArchiveMatch(match.date))
+        .sort((a, b) => new Date(b.date) - new Date(a.date)); // Sort archived matches newest first
       
       console.log('=== REFETCH MATCHES DEBUG ===');
       console.log('Total matches loaded:', matches.length);
