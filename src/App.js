@@ -1,13 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Calendar, Clock, Trash2, Plus, AlertCircle, ExternalLink, User, X, Archive } from 'lucide-react';
 
-// Airtable Configuration
-// Note: In production, replace these with your actual Airtable credentials
-const AIRTABLE_API_KEY = 'placeholder_api_key'; // Replace with your actual API key
-const AIRTABLE_BASE_ID = 'placeholder_base_id'; // Replace with your actual base ID
+// Airtable Configuration - Using secure environment variables
+const AIRTABLE_API_KEY = process.env.REACT_APP_AIRTABLE_API_KEY || 'placeholder_api_key';
+const AIRTABLE_BASE_ID = process.env.REACT_APP_AIRTABLE_BASE_ID || 'placeholder_base_id';
 const AIRTABLE_TABLE_NAME = 'Matches';
 
-// Debug: Log the configuration (but mask the API key for security)
+// Debug: Log the actual values being used (but mask the API key for security)
 console.log('=== AIRTABLE DEBUG INFO ===');
 console.log('Base ID:', AIRTABLE_BASE_ID);
 console.log('Table Name:', AIRTABLE_TABLE_NAME);
@@ -15,6 +14,10 @@ console.log('API Key starts with:', AIRTABLE_API_KEY.substring(0, 8) + '...');
 console.log('Full URL:', `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${AIRTABLE_TABLE_NAME}`);
 console.log('Has API Key:', !!AIRTABLE_API_KEY && AIRTABLE_API_KEY !== 'placeholder_api_key');
 console.log('Has Base ID:', !!AIRTABLE_BASE_ID && AIRTABLE_BASE_ID !== 'placeholder_base_id');
+console.log('Environment variables loaded:', {
+  'REACT_APP_AIRTABLE_API_KEY': !!process.env.REACT_APP_AIRTABLE_API_KEY,
+  'REACT_APP_AIRTABLE_BASE_ID': !!process.env.REACT_APP_AIRTABLE_BASE_ID
+});
 
 // Test different table names
 console.log('Testing URLs:');
