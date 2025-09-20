@@ -66,10 +66,13 @@ const DimondTennisApp = () => {
   const [newMatch, setNewMatch] = useState({
     date: '',
     time: '',
-    organizer: ''
+    organizer: '',
+    courts: 2  // Default to 2 courts
   });
 
   // Helper functions
+  const getPlayerLimit = (courts) => courts === 1 ? 4 : 8;
+  
   const formatDate = (dateString) => {
     const [year, month, day] = dateString.split('-').map(Number);
     const date = new Date(year, month - 1, day);
@@ -208,6 +211,7 @@ const DimondTennisApp = () => {
           date: record.fields.Date || '',
           time: record.fields.Time || '',
           organizer: record.fields.Organizer || '',
+          courts: record.fields.Courts || 2, // Default to 2 courts for backward compatibility
           signups: record.fields.Signups ? record.fields.Signups.split('\n').filter(s => s.trim()) : [],
           teams: teams,
           scores: scores
@@ -251,7 +255,7 @@ const DimondTennisApp = () => {
   };
 
   const addMatch = async () => {
-    if (newMatch.date && newMatch.time && newMatch.organizer) {
+    if (newMatch.date && newMatch.time && newMatch.organizer && newMatch.courts) {
       try {
         setLoading(true);
         
@@ -260,6 +264,7 @@ const DimondTennisApp = () => {
             Date: newMatch.date,
             Time: newMatch.time,
             Organizer: newMatch.organizer,
+            Courts: newMatch.courts,
             Signups: newMatch.organizer
           }
         };
@@ -283,7 +288,7 @@ const DimondTennisApp = () => {
         const responseData = await response.json();
         console.log('Success response:', responseData);
 
-        setNewMatch({ date: '', time: '', organizer: '' });
+        setNewMatch({ date: '', time: '', organizer: '', courts: 2 });
         setCurrentView('matches');
         await refetchMatches();
       } catch (error) {
@@ -537,6 +542,7 @@ const DimondTennisApp = () => {
             date: record.fields.Date || '',
             time: record.fields.Time || '',
             organizer: record.fields.Organizer || '',
+            courts: record.fields.Courts || 2, // Default to 2 courts for backward compatibility
             signups: record.fields.Signups ? record.fields.Signups.split('\n').filter(s => s.trim()) : [],
             teams: teams,
             scores: scores
@@ -584,6 +590,7 @@ const DimondTennisApp = () => {
     if (!match) return null;
 
     const isArchived = shouldArchiveMatch(match.date);
+    const playerLimit = getPlayerLimit(match.courts);
 
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -621,14 +628,14 @@ const DimondTennisApp = () => {
 
             <div className="mb-4">
               <p className="text-sm text-gray-600 mb-2">
-                Current signups: {match.signups.length}/8
+                Current signups: {match.signups.length}/{playerLimit} ({match.courts} court{match.courts === 1 ? '' : 's'})
               </p>
               {isArchived && (
                 <p className="text-sm text-red-600 mb-2">
                   ⚠️ This match has already occurred and is archived.
                 </p>
               )}
-              {!isArchived && match.signups.length >= 8 && (
+              {!isArchived && match.signups.length >= playerLimit && (
                 <p className="text-sm text-amber-600">
                   ⚠️ This match is full. You'll be added to the waiting list.
                 </p>
@@ -1045,7 +1052,10 @@ const DimondTennisApp = () => {
     );
   };
 
-  const MatchCard = ({ match, isArchived = false }) => (
+  const MatchCard = ({ match, isArchived = false }) => {
+    const playerLimit = getPlayerLimit(match.courts);
+    
+    return (
     <div key={match.id} className="bg-white rounded-lg shadow-md overflow-hidden">
       <div className={`${isArchived ? 'bg-gray-600' : 'bg-black'} text-white p-4`}>
         <div className="flex items-center justify-between">
@@ -1139,11 +1149,14 @@ const DimondTennisApp = () => {
             <h4 className="font-medium text-gray-900 mb-3 flex items-center">
               Confirmed Players
               <span className="ml-2 bg-gray-100 text-gray-800 text-xs px-2 py-1 rounded-full">
-                {Math.min(match.signups.length, 8)}/8
+                {Math.min(match.signups.length, playerLimit)}/{playerLimit}
+              </span>
+              <span className="ml-2 text-xs text-gray-500">
+                ({match.courts} court{match.courts === 1 ? '' : 's'})
               </span>
             </h4>
             <div className="space-y-2">
-              {match.signups.slice(0, 8).map((player, index) => (
+              {match.signups.slice(0, playerLimit).map((player, index) => (
                 <div key={index} className="flex items-center justify-between bg-gray-50 px-3 py-2 rounded-md">
                   <span className="text-sm">
                     <span className="font-medium text-gray-700">#{index + 1}</span>
@@ -1168,28 +1181,28 @@ const DimondTennisApp = () => {
                   No players signed up yet
                 </div>
               )}
-              {match.signups.length > 0 && match.signups.length < 8 && (
+              {match.signups.length > 0 && match.signups.length < playerLimit && (
                 <div className="text-sm text-gray-500 italic px-3 py-2">
-                  {8 - match.signups.length} spots remaining
+                  {playerLimit - match.signups.length} spots remaining
                 </div>
               )}
             </div>
           </div>
 
-          {match.signups.length > 8 && (
+          {match.signups.length > playerLimit && (
             <div>
               <h4 className="font-medium text-gray-900 mb-3 flex items-center">
                 <AlertCircle className="h-4 w-4 mr-1 text-gray-500" />
                 Waiting List
                 <span className="ml-2 bg-gray-200 text-gray-800 text-xs px-2 py-1 rounded-full">
-                  {match.signups.length - 8}
+                  {match.signups.length - playerLimit}
                 </span>
               </h4>
               <div className="space-y-2">
-                {match.signups.slice(8).map((player, index) => (
+                {match.signups.slice(playerLimit).map((player, index) => (
                   <div key={index} className="flex items-center justify-between bg-gray-100 px-3 py-2 rounded-md">
                     <span className="text-sm">
-                      <span className="font-medium text-gray-700">#{index + 9}</span>
+                      <span className="font-medium text-gray-700">#{index + playerLimit + 1}</span>
                       <span className="ml-2">{player}</span>
                     </span>
                     {!isArchived && (
@@ -1210,6 +1223,7 @@ const DimondTennisApp = () => {
       </div>
     </div>
   );
+  };
 
   const LoginForm = () => (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -1438,6 +1452,20 @@ const DimondTennisApp = () => {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Number of Courts
+                  </label>
+                  <select
+                    value={newMatch.courts}
+                    onChange={(e) => setNewMatch({...newMatch, courts: parseInt(e.target.value)})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
+                  >
+                    <option value={1}>1 Court (4 players max)</option>
+                    <option value={2}>2 Courts (8 players max)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
                     Time
                   </label>
                   <input
@@ -1464,7 +1492,7 @@ const DimondTennisApp = () => {
 
                 <button
                   onClick={addMatch}
-                  disabled={!newMatch.date || !newMatch.time || !newMatch.organizer || loading}
+                  disabled={!newMatch.date || !newMatch.time || !newMatch.organizer || !newMatch.courts || loading}
                   className="w-full px-4 py-2 bg-black text-white rounded-md hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
                 >
                   {loading ? 'Creating...' : 'Create Match'}
@@ -1475,10 +1503,11 @@ const DimondTennisApp = () => {
             <div className="bg-gray-50 border border-gray-200 rounded-md p-4 max-w-lg mx-auto">
               <h3 className="font-medium text-gray-900 mb-2">How organizing works:</h3>
               <ul className="text-sm text-gray-700 space-y-1">
-                <li>• Reserve courts at cityofoakland.perfectmind.com first</li>
-                <li>• Post your match here with date and time</li>
+                <li>• Reserve 1 or 2 courts at cityofoakland.perfectmind.com first</li>
+                <li>• Post your match here with date, time, and court count</li>
+                <li>• 1 court = 4 players max, 2 courts = 8 players max</li>
                 <li>• You'll be automatically signed up as player #1</li>
-                <li>• Other players can sign up (8 total spots)</li>
+                <li>• Other players can sign up (up to the court limit)</li>
                 <li>• Additional signups go on a waiting list</li>
               </ul>
             </div>
