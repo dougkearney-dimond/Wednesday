@@ -150,9 +150,9 @@ const DimondTennisApp = () => {
       currentDate.setDate(currentDate.getDate() + 7);
     }
 
-    // Keep generating Wednesdays until we have 4 available ones
+    // Keep generating Wednesdays until we have 12 available ones
     let weekOffset = 0;
-    while (availableWednesdays.length < 4) {
+    while (availableWednesdays.length < 12) {
       const wednesday = new Date(currentDate);
       wednesday.setDate(currentDate.getDate() + (weekOffset * 7));
 
@@ -1321,8 +1321,8 @@ const DimondTennisApp = () => {
             <button
               onClick={() => setCurrentView('matches')}
               className={`py-4 px-2 border-b-2 font-medium text-sm ${currentView === 'matches'
-                  ? 'border-black text-black'
-                  : 'border-transparent text-gray-500 hover:text-gray-700'
+                ? 'border-black text-black'
+                : 'border-transparent text-gray-500 hover:text-gray-700'
                 }`}
             >
               Current Matches
@@ -1330,8 +1330,8 @@ const DimondTennisApp = () => {
             <button
               onClick={() => setCurrentView('archived')}
               className={`py-4 px-2 border-b-2 font-medium text-sm ${currentView === 'archived'
-                  ? 'border-black text-black'
-                  : 'border-transparent text-gray-500 hover:text-gray-700'
+                ? 'border-black text-black'
+                : 'border-transparent text-gray-500 hover:text-gray-700'
                 }`}
             >
               Archived Matches ({archivedMatches.length})
@@ -1339,8 +1339,8 @@ const DimondTennisApp = () => {
             <button
               onClick={() => setCurrentView('organize')}
               className={`py-4 px-2 border-b-2 font-medium text-sm ${currentView === 'organize'
-                  ? 'border-black text-black'
-                  : 'border-transparent text-gray-500 hover:text-gray-700'
+                ? 'border-black text-black'
+                : 'border-transparent text-gray-500 hover:text-gray-700'
                 }`}
             >
               Organize Match
