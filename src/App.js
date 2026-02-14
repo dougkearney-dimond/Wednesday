@@ -150,9 +150,9 @@ const DimondTennisApp = () => {
       currentDate.setDate(currentDate.getDate() + 7);
     }
 
-    // Keep generating Wednesdays until we have 12 available ones
+    // Keep generating Wednesdays until we have 9 available ones
     let weekOffset = 0;
-    while (availableWednesdays.length < 12) {
+    while (availableWednesdays.length < 9) {
       const wednesday = new Date(currentDate);
       wednesday.setDate(currentDate.getDate() + (weekOffset * 7));
 
