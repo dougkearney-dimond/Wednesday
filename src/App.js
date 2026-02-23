@@ -67,6 +67,7 @@ const DimondTennisApp = () => {
     isOpen: false,
     matchId: null,
     receipts: ['', ''],
+    receiptNames: ['', ''],
     courts: 1
   });
 
@@ -75,7 +76,8 @@ const DimondTennisApp = () => {
     time: '',
     organizer: '',
     courts: 2,  // Default to 2 courts
-    receipts: ['', '']
+    receipts: ['', ''],
+    receiptNames: ['', '']
   });
 
   // Helper functions
@@ -308,9 +310,13 @@ const DimondTennisApp = () => {
       const reader = new FileReader();
       reader.onload = (event) => {
         const base64String = event.target.result;
-        const newReceipts = [...newMatch.receipts];
-        newReceipts[index] = base64String;
-        setNewMatch(prev => ({ ...prev, receipts: newReceipts }));
+        setNewMatch(prev => {
+          const newReceipts = [...prev.receipts];
+          const newNames = [...prev.receiptNames];
+          newReceipts[index] = base64String;
+          newNames[index] = file.name;
+          return { ...prev, receipts: newReceipts, receiptNames: newNames };
+        });
       };
       reader.readAsDataURL(file);
     }
@@ -352,7 +358,7 @@ const DimondTennisApp = () => {
         const responseData = await response.json();
         console.log('Success response:', responseData);
 
-        setNewMatch({ date: '', time: '', organizer: '', courts: 2, receipts: ['', ''] });
+        setNewMatch({ date: '', time: '', organizer: '', courts: 2, receipts: ['', ''], receiptNames: ['', ''] });
         setCurrentView('matches');
         await refetchMatches();
       } catch (error) {
@@ -489,7 +495,7 @@ const DimondTennisApp = () => {
   };
 
   const closeReceiptsModal = () => {
-    setReceiptsModal({ isOpen: false, matchId: null, receipts: ['', ''], courts: 1 });
+    setReceiptsModal({ isOpen: false, matchId: null, receipts: ['', ''], receiptNames: ['', ''], courts: 1 });
   };
 
   const handleReceiptFileChange = (index, e) => {
@@ -510,9 +516,13 @@ const DimondTennisApp = () => {
       const reader = new FileReader();
       reader.onload = (event) => {
         const base64String = event.target.result;
-        const newReceipts = [...receiptsModal.receipts];
-        newReceipts[index] = base64String;
-        setReceiptsModal(prev => ({ ...prev, receipts: newReceipts }));
+        setReceiptsModal(prev => {
+          const newReceipts = [...prev.receipts];
+          const newNames = [...prev.receiptNames];
+          newReceipts[index] = base64String;
+          newNames[index] = file.name;
+          return { ...prev, receipts: newReceipts, receiptNames: newNames };
+        });
       };
       reader.readAsDataURL(file);
     }
@@ -1223,7 +1233,7 @@ const DimondTennisApp = () => {
                     <div className="flex-1">
                       <input
                         type="file"
-                        accept="application/pdf"
+                        accept=".pdf"
                         onChange={(e) => handleReceiptFileChange(i, e)}
                         className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-black file:text-white hover:file:bg-gray-800"
                       />
@@ -1234,6 +1244,11 @@ const DimondTennisApp = () => {
                         <span className="text-[10px] text-green-600 font-medium">
                           {receiptsModal.receipts[i].startsWith('http') ? 'Stored' : 'New'}
                         </span>
+                        {receiptsModal.receiptNames[i] && (
+                          <span className="text-[8px] text-gray-400 truncate max-w-[60px]">
+                            {receiptsModal.receiptNames[i]}
+                          </span>
+                        )}
                       </div>
                     )}
                   </div>
@@ -1755,13 +1770,20 @@ const DimondTennisApp = () => {
                           <div className="relative flex-1">
                             <input
                               type="file"
-                              accept="application/pdf"
+                              accept=".pdf"
                               onChange={(e) => handleFileChange(i, e)}
                               className="w-full text-xs text-gray-500 file:mr-4 file:py-2 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-black file:text-white hover:file:bg-gray-800"
                             />
                           </div>
                           {newMatch.receipts[i] && (
-                            <FileText className="h-5 w-5 text-green-600" title="File ready to upload" />
+                            <div className="flex flex-col items-center">
+                              <FileText className="h-5 w-5 text-green-600" title="File ready to upload" />
+                              {newMatch.receiptNames[i] && (
+                                <span className="text-[10px] text-gray-500 mt-0.5 truncate max-w-[80px]">
+                                  {newMatch.receiptNames[i]}
+                                </span>
+                              )}
+                            </div>
                           )}
                         </div>
                       </div>
