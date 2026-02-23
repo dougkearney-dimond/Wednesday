@@ -81,6 +81,29 @@ const DimondTennisApp = () => {
   // Helper functions
   const getPlayerLimit = (courts) => courts === 1 ? 4 : 8;
 
+  const viewReceipt = async (receiptData) => {
+    if (!receiptData) return;
+
+    // Handle Data URLs (Base64) by converting to a Blob URL
+    // This bypasses browser restrictions on opening Data URLs in new tabs
+    if (receiptData.startsWith('data:')) {
+      try {
+        const response = await fetch(receiptData);
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        window.open(url, '_blank');
+      } catch (error) {
+        console.error('Error opening PDF data:', error);
+        // Fallback for very large strings or errors
+        const newWindow = window.open();
+        newWindow.document.write(`<iframe src="${receiptData}" frameborder="0" style="border:0; top:0px; left:0px; bottom:0px; right:0px; width:100%; height:100%;" allowfullscreen></iframe>`);
+      }
+    } else {
+      // Regular URL (like Airtable attachment URL)
+      window.open(receiptData, '_blank');
+    }
+  };
+
   const formatDate = (dateString) => {
     const [year, month, day] = dateString.split('-').map(Number);
     const date = new Date(year, month - 1, day);
@@ -1429,26 +1452,22 @@ const DimondTennisApp = () => {
                 </h4>
                 <div className="flex flex-wrap gap-2">
                   {match.receipt1 && (
-                    <a
-                      href={match.receipt1}
-                      target="_blank"
-                      rel="noopener noreferrer"
+                    <button
+                      onClick={() => viewReceipt(match.receipt1)}
                       className="inline-flex items-center px-3 py-1 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 text-sm transition-colors"
                     >
                       <Download className="h-3 w-3 mr-1" />
                       Court 1 Receipt
-                    </a>
+                    </button>
                   )}
                   {match.receipt2 && (
-                    <a
-                      href={match.receipt2}
-                      target="_blank"
-                      rel="noopener noreferrer"
+                    <button
+                      onClick={() => viewReceipt(match.receipt2)}
                       className="inline-flex items-center px-3 py-1 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 text-sm transition-colors"
                     >
                       <Download className="h-3 w-3 mr-1" />
                       Court 2 Receipt
-                    </a>
+                    </button>
                   )}
                 </div>
               </div>
