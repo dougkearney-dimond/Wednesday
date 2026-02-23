@@ -63,6 +63,13 @@ const DimondTennisApp = () => {
     }
   });
 
+  const [receiptsModal, setReceiptsModal] = useState({
+    isOpen: false,
+    matchId: null,
+    receipts: ['', ''],
+    courts: 1
+  });
+
   const [newMatch, setNewMatch] = useState({
     date: '',
     time: '',
@@ -443,6 +450,76 @@ const DimondTennisApp = () => {
     } catch (error) {
       console.error('Error saving results:', error);
       alert('Error saving results. Please try again.');
+      setLoading(false);
+    }
+  };
+  const openReceiptsModal = (matchId) => {
+    const match = organizedMatches.find(m => m.id === matchId) || archivedMatches.find(m => m.id === matchId);
+    if (match) {
+      setReceiptsModal({
+        isOpen: true,
+        matchId: matchId,
+        receipts: [match.receipt1 || '', match.receipt2 || ''],
+        courts: match.courts || 1
+      });
+    }
+  };
+
+  const closeReceiptsModal = () => {
+    setReceiptsModal({ isOpen: false, matchId: null, receipts: ['', ''], courts: 1 });
+  };
+
+  const handleReceiptFileChange = (index, e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (file.type !== 'application/pdf') {
+        alert('Please select a PDF file');
+        e.target.value = '';
+        return;
+      }
+
+      if (file.size > 5 * 1024 * 1024) { // 5MB limit
+        alert('File is too large. Please select a PDF under 5MB.');
+        e.target.value = '';
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const base64String = event.target.result;
+        const newReceipts = [...receiptsModal.receipts];
+        newReceipts[index] = base64String;
+        setReceiptsModal(prev => ({ ...prev, receipts: newReceipts }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleSaveReceipts = async () => {
+    try {
+      setLoading(true);
+
+      const response = await fetch(`${airtableUrl}/${receiptsModal.matchId}`, {
+        method: 'PATCH',
+        headers: airtableHeaders,
+        body: JSON.stringify({
+          fields: {
+            Receipt1: receiptsModal.receipts[0] || '',
+            Receipt2: receiptsModal.courts === 2 ? (receiptsModal.receipts[1] || '') : ''
+          }
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      closeReceiptsModal();
+      await refetchMatches();
+      setLoading(false);
+    } catch (error) {
+      console.error('Error saving receipts:', error);
+      alert('Error saving receipts. Please try again.');
       setLoading(false);
     }
   };
@@ -1092,6 +1169,81 @@ const DimondTennisApp = () => {
     );
   };
 
+  const ReceiptsModal = () => {
+    if (!receiptsModal.isOpen) return null;
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-lg shadow-xl max-w-lg w-full overflow-y-auto">
+          <div className="bg-gray-600 text-white p-4 rounded-t-lg flex items-center justify-between">
+            <h3 className="text-lg font-semibold flex items-center">
+              <Upload className="h-5 w-5 mr-2" />
+              Manage Court Receipts
+            </h3>
+            <button onClick={closeReceiptsModal} className="text-gray-300 hover:text-white">
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+
+          <div className="p-6">
+            <p className="text-sm text-gray-600 mb-6">
+              Upload PDF receipts for the courts reserved for this match.
+            </p>
+
+            <div className="space-y-6">
+              {[...Array(receiptsModal.courts)].map((_, i) => (
+                <div key={i} className="border-b border-gray-100 pb-4 last:border-0 last:pb-0">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Court {i + 1} Receipt (PDF)
+                  </label>
+                  <div className="flex items-center space-x-3">
+                    <div className="flex-1">
+                      <input
+                        type="file"
+                        accept="application/pdf"
+                        onChange={(e) => handleReceiptFileChange(i, e)}
+                        className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-black file:text-white hover:file:bg-gray-800"
+                      />
+                    </div>
+                    {receiptsModal.receipts[i] && (
+                      <div className="flex flex-col items-center">
+                        <FileText className="h-6 w-6 text-green-600" title="File ready to upload" />
+                        <span className="text-[10px] text-green-600 font-medium">
+                          {receiptsModal.receipts[i].startsWith('http') ? 'Stored' : 'New'}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                  {receiptsModal.receipts[i] && receiptsModal.receipts[i].startsWith('http') && (
+                    <p className="text-[10px] text-blue-600 mt-1 italic">
+                      Current receipt is already stored online. Uploading a new one will replace it.
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-8 flex space-x-3">
+              <button
+                onClick={handleSaveReceipts}
+                disabled={loading}
+                className="flex-1 bg-black text-white py-2 px-4 rounded-md hover:bg-gray-800 disabled:opacity-50 font-medium"
+              >
+                {loading ? 'Saving...' : 'Save Receipts'}
+              </button>
+              <button
+                onClick={closeReceiptsModal}
+                className="flex-1 bg-gray-100 text-gray-800 py-2 px-4 rounded-md hover:bg-gray-200 font-medium"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   const MatchCard = ({ match, isArchived = false }) => {
     const playerLimit = getPlayerLimit(match.courts);
 
@@ -1117,24 +1269,33 @@ const DimondTennisApp = () => {
                 <User className="h-4 w-4 mr-1" />
                 <span className="text-sm">by {match.organizer}</span>
               </div>
-              {!isArchived && (
+              <div className="mt-2 flex flex-col items-end space-y-1">
                 <button
-                  onClick={() => deleteMatch(match.id)}
-                  className="mt-2 text-red-400 hover:text-red-300 text-xs"
-                  title="Delete entire match"
+                  onClick={() => openReceiptsModal(match.id)}
+                  className="text-white/70 hover:text-white text-[10px] bg-white/10 px-2 py-1 rounded"
+                  title="Manage receipts"
                 >
-                  Delete Match
+                  Manage Receipts
                 </button>
-              )}
-              {isArchived && (
-                <button
-                  onClick={() => openResultsModal(match.id)}
-                  className="mt-2 text-blue-400 hover:text-blue-300 text-xs"
-                  title="Record match results"
-                >
-                  {match.teams ? 'Edit Results' : 'Record Results'}
-                </button>
-              )}
+                {!isArchived && (
+                  <button
+                    onClick={() => deleteMatch(match.id)}
+                    className="text-red-400 hover:text-red-300 text-[10px]"
+                    title="Delete entire match"
+                  >
+                    Delete Match
+                  </button>
+                )}
+                {isArchived && (
+                  <button
+                    onClick={() => openResultsModal(match.id)}
+                    className="text-blue-400 hover:text-blue-300 text-[10px]"
+                    title="Record match results"
+                  >
+                    {match.teams ? 'Edit Results' : 'Record Results'}
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -1635,6 +1796,7 @@ const DimondTennisApp = () => {
 
       <SignupModal />
       <ResultsModal />
+      <ReceiptsModal />
     </div>
   );
 };
