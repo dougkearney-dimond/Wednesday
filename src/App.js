@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Calendar, Clock, Trash2, Plus, AlertCircle, ExternalLink, User, X, Archive } from 'lucide-react';
+import { Calendar, Clock, Trash2, Plus, AlertCircle, ExternalLink, User, X, Archive, FileText, Upload, Download } from 'lucide-react';
 
 // Airtable Configuration - Using secure environment variables
 const AIRTABLE_API_KEY = process.env.REACT_APP_AIRTABLE_API_KEY || 'placeholder_api_key';
@@ -67,7 +67,8 @@ const DimondTennisApp = () => {
     date: '',
     time: '',
     organizer: '',
-    courts: 2  // Default to 2 courts
+    courts: 2,  // Default to 2 courts
+    receipts: ['', '']
   });
 
   // Helper functions
@@ -150,11 +151,10 @@ const DimondTennisApp = () => {
       currentDate.setDate(currentDate.getDate() + 7);
     }
 
-    // Keep generating Wednesdays until we have 9 available ones
-    let weekOffset = 0;
-    while (availableWednesdays.length < 9) {
+    // Check the next 9 Wednesdays
+    for (let i = 0; i < 9; i++) {
       const wednesday = new Date(currentDate);
-      wednesday.setDate(currentDate.getDate() + (weekOffset * 7));
+      wednesday.setDate(currentDate.getDate() + (i * 7));
 
       const year = wednesday.getFullYear();
       const month = String(wednesday.getMonth() + 1).padStart(2, '0');
@@ -165,11 +165,6 @@ const DimondTennisApp = () => {
       if (!organizedDates.includes(dateString)) {
         availableWednesdays.push(dateString);
       }
-
-      weekOffset++;
-
-      // Safety break to prevent infinite loop (shouldn't happen in normal use)
-      if (weekOffset > 52) break;
     }
 
     return availableWednesdays;
@@ -219,7 +214,13 @@ const DimondTennisApp = () => {
           courts: record.fields.Courts || 2, // Default to 2 courts for backward compatibility
           signups: record.fields.Signups ? record.fields.Signups.split('\n').filter(s => s.trim()) : [],
           teams: teams,
-          scores: scores
+          scores: scores,
+          receipt1: record.fields.Receipt1 && Array.isArray(record.fields.Receipt1)
+            ? record.fields.Receipt1[0].url
+            : (record.fields.Receipt1 || null),
+          receipt2: record.fields.Receipt2 && Array.isArray(record.fields.Receipt2)
+            ? record.fields.Receipt2[0].url
+            : (record.fields.Receipt2 || null)
         };
       });
 
@@ -259,6 +260,32 @@ const DimondTennisApp = () => {
     }
   };
 
+  const handleFileChange = (index, e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (file.type !== 'application/pdf') {
+        alert('Please select a PDF file');
+        e.target.value = '';
+        return;
+      }
+
+      if (file.size > 5 * 1024 * 1024) { // 5MB limit
+        alert('File is too large. Please select a PDF under 5MB.');
+        e.target.value = '';
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const base64String = event.target.result;
+        const newReceipts = [...newMatch.receipts];
+        newReceipts[index] = base64String;
+        setNewMatch(prev => ({ ...prev, receipts: newReceipts }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const addMatch = async () => {
     if (newMatch.date && newMatch.time && newMatch.organizer && newMatch.courts) {
       try {
@@ -270,7 +297,9 @@ const DimondTennisApp = () => {
             Time: newMatch.time,
             Organizer: newMatch.organizer,
             Courts: newMatch.courts,
-            Signups: newMatch.organizer
+            Signups: newMatch.organizer,
+            Receipt1: newMatch.receipts[0] || '',
+            Receipt2: newMatch.courts === 2 ? (newMatch.receipts[1] || '') : ''
           }
         };
 
@@ -293,7 +322,7 @@ const DimondTennisApp = () => {
         const responseData = await response.json();
         console.log('Success response:', responseData);
 
-        setNewMatch({ date: '', time: '', organizer: '', courts: 2 });
+        setNewMatch({ date: '', time: '', organizer: '', courts: 2, receipts: ['', ''] });
         setCurrentView('matches');
         await refetchMatches();
       } catch (error) {
@@ -550,7 +579,13 @@ const DimondTennisApp = () => {
             courts: record.fields.Courts || 2, // Default to 2 courts for backward compatibility
             signups: record.fields.Signups ? record.fields.Signups.split('\n').filter(s => s.trim()) : [],
             teams: teams,
-            scores: scores
+            scores: scores,
+            receipt1: record.fields.Receipt1 && Array.isArray(record.fields.Receipt1)
+              ? record.fields.Receipt1[0].url
+              : (record.fields.Receipt1 || null),
+            receipt2: record.fields.Receipt2 && Array.isArray(record.fields.Receipt2)
+              ? record.fields.Receipt2[0].url
+              : (record.fields.Receipt2 || null)
           };
         });
 
@@ -1224,6 +1259,39 @@ const DimondTennisApp = () => {
                 </div>
               </div>
             )}
+
+            {(match.receipt1 || match.receipt2) && (
+              <div className="pt-4 border-t border-gray-100">
+                <h4 className="font-medium text-gray-900 mb-2 flex items-center">
+                  <FileText className="h-4 w-4 mr-1 text-gray-500" />
+                  Court Receipts
+                </h4>
+                <div className="flex flex-wrap gap-2">
+                  {match.receipt1 && (
+                    <a
+                      href={match.receipt1}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center px-3 py-1 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 text-sm transition-colors"
+                    >
+                      <Download className="h-3 w-3 mr-1" />
+                      Court 1 Receipt
+                    </a>
+                  )}
+                  {match.receipt2 && (
+                    <a
+                      href={match.receipt2}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center px-3 py-1 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 text-sm transition-colors"
+                    >
+                      <Download className="h-3 w-3 mr-1" />
+                      Court 2 Receipt
+                    </a>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -1490,6 +1558,35 @@ const DimondTennisApp = () => {
                     placeholder="Your name"
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
                   />
+                </div>
+
+                <div className="pt-4 border-t border-gray-100">
+                  <h4 className="text-sm font-semibold text-gray-900 mb-3 flex items-center">
+                    <Upload className="h-4 w-4 mr-2" />
+                    Upload PDF Receipts
+                  </h4>
+                  <div className="space-y-4">
+                    {[...Array(newMatch.courts)].map((_, i) => (
+                      <div key={i}>
+                        <label className="block text-xs font-medium text-gray-500 mb-1 uppercase tracking-wider">
+                          Court {i + 1} Receipt (PDF)
+                        </label>
+                        <div className="flex items-center space-x-2">
+                          <div className="relative flex-1">
+                            <input
+                              type="file"
+                              accept="application/pdf"
+                              onChange={(e) => handleFileChange(i, e)}
+                              className="w-full text-xs text-gray-500 file:mr-4 file:py-2 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-black file:text-white hover:file:bg-gray-800"
+                            />
+                          </div>
+                          {newMatch.receipts[i] && (
+                            <FileText className="h-5 w-5 text-green-600" title="File ready to upload" />
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
 
                 <button
