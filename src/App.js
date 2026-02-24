@@ -71,6 +71,8 @@ const DimondTennisApp = () => {
     courts: 1
   });
 
+  const [viewingPdf, setViewingPdf] = useState({ isOpen: false, data: null, title: '' });
+
   const [newMatch, setNewMatch] = useState({
     date: '',
     time: '',
@@ -83,26 +85,32 @@ const DimondTennisApp = () => {
   // Helper functions
   const getPlayerLimit = (courts) => courts === 1 ? 4 : 8;
 
-  const viewReceipt = async (receiptData) => {
+  const viewReceipt = async (receiptData, title = 'Court Receipt') => {
     if (!receiptData) return;
 
-    // Handle Data URLs (Base64) by converting to a Blob URL
-    // This bypasses browser restrictions on opening Data URLs in new tabs
-    if (receiptData.startsWith('data:')) {
-      try {
+    try {
+      let finalUrl = receiptData;
+
+      // If it's a Data URL, we still use a Blob for better iframe reliability
+      if (receiptData.startsWith('data:')) {
         const response = await fetch(receiptData);
         const blob = await response.blob();
-        const url = URL.createObjectURL(blob);
-        window.open(url, '_blank');
-      } catch (error) {
-        console.error('Error opening PDF data:', error);
-        // Fallback for very large strings or errors
-        const newWindow = window.open();
-        newWindow.document.write(`<iframe src="${receiptData}" frameborder="0" style="border:0; top:0px; left:0px; bottom:0px; right:0px; width:100%; height:100%;" allowfullscreen></iframe>`);
+        finalUrl = URL.createObjectURL(blob);
       }
-    } else {
-      // Regular URL (like Airtable attachment URL)
-      window.open(receiptData, '_blank');
+
+      setViewingPdf({
+        isOpen: true,
+        data: finalUrl,
+        title: title
+      });
+    } catch (error) {
+      console.error('Error preparing PDF viewer:', error);
+      // Fallback: stay with original data or alert
+      setViewingPdf({
+        isOpen: true,
+        data: receiptData,
+        title: title
+      });
     }
   };
 
@@ -301,10 +309,12 @@ const DimondTennisApp = () => {
         return;
       }
 
-      if (file.size > 5 * 1024 * 1024) { // 5MB limit
-        alert('File is too large. Please select a PDF under 5MB.');
-        e.target.value = '';
-        return;
+      if (file.size > 75 * 1024) { // 75KB limit for Airtable Text Fields
+        const proceed = window.confirm('Warning: This PDF is larger than 75KB. Airtable text fields may truncate it, causing a blank page when viewing. Try to use a smaller PDF or compress it. Proceed anyway?');
+        if (!proceed) {
+          e.target.value = '';
+          return;
+        }
       }
 
       const reader = new FileReader();
@@ -507,10 +517,12 @@ const DimondTennisApp = () => {
         return;
       }
 
-      if (file.size > 5 * 1024 * 1024) { // 5MB limit
-        alert('File is too large. Please select a PDF under 5MB.');
-        e.target.value = '';
-        return;
+      if (file.size > 75 * 1024) { // 75KB limit for Airtable Text Fields
+        const proceed = window.confirm('Warning: This PDF is larger than 75KB. Airtable text fields may truncate it, causing a blank page when viewing. Try to use a smaller PDF or compress it. Proceed anyway?');
+        if (!proceed) {
+          e.target.value = '';
+          return;
+        }
       }
 
       const reader = new FileReader();
@@ -1202,6 +1214,41 @@ const DimondTennisApp = () => {
     );
   };
 
+  const PdfViewerModal = () => {
+    if (!viewingPdf.isOpen) return null;
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-[60] p-4">
+        <div className="bg-white rounded-lg shadow-2xl w-full max-w-5xl h-[90vh] flex flex-col">
+          <div className="bg-gray-800 text-white p-4 rounded-t-lg flex items-center justify-between">
+            <h3 className="font-semibold truncate pr-4">{viewingPdf.title || 'Court Receipt'}</h3>
+            <button
+              onClick={() => setViewingPdf({ isOpen: false, data: null, title: '' })}
+              className="text-gray-400 hover:text-white transition-colors"
+            >
+              <X className="h-6 w-6" />
+            </button>
+          </div>
+          <div className="flex-1 bg-gray-100">
+            <iframe
+              src={viewingPdf.data}
+              className="w-full h-full border-none"
+              title="PDF Viewer"
+            />
+          </div>
+          <div className="bg-gray-50 p-3 rounded-b-lg border-t text-center">
+            <button
+              onClick={() => setViewingPdf({ isOpen: false, data: null, title: '' })}
+              className="bg-gray-800 text-white px-6 py-2 rounded-md hover:bg-gray-700 font-medium"
+            >
+              Close Viewer
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   const ReceiptsModal = () => {
     if (!receiptsModal.isOpen) return null;
 
@@ -1468,7 +1515,7 @@ const DimondTennisApp = () => {
                 <div className="flex flex-wrap gap-2">
                   {match.receipt1 && (
                     <button
-                      onClick={() => viewReceipt(match.receipt1)}
+                      onClick={() => viewReceipt(match.receipt1, `Receipt 1 - ${formatShortDate(match.date)}`)}
                       className="inline-flex items-center px-3 py-1 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 text-sm transition-colors"
                     >
                       <Download className="h-3 w-3 mr-1" />
@@ -1477,7 +1524,7 @@ const DimondTennisApp = () => {
                   )}
                   {match.receipt2 && (
                     <button
-                      onClick={() => viewReceipt(match.receipt2)}
+                      onClick={() => viewReceipt(match.receipt2, `Receipt 2 - ${formatShortDate(match.date)}`)}
                       className="inline-flex items-center px-3 py-1 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 text-sm transition-colors"
                     >
                       <Download className="h-3 w-3 mr-1" />
@@ -1838,6 +1885,7 @@ const DimondTennisApp = () => {
       <SignupModal />
       <ResultsModal />
       <ReceiptsModal />
+      <PdfViewerModal />
     </div>
   );
 };
