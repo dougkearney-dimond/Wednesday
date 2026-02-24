@@ -303,14 +303,15 @@ const DimondTennisApp = () => {
   const handleFileChange = (index, e) => {
     const file = e.target.files[0];
     if (file) {
-      if (file.type !== 'application/pdf') {
-        alert('Please select a PDF file');
+      const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+      if (!allowedTypes.includes(file.type)) {
+        alert('Please select a PDF or Image file (JPG, PNG, GIF)');
         e.target.value = '';
         return;
       }
 
       if (file.size > 75 * 1024) { // 75KB limit for Airtable Text Fields
-        const proceed = window.confirm('Warning: This PDF is larger than 75KB. Airtable text fields may truncate it, causing a blank page when viewing. Try to use a smaller PDF or compress it. Proceed anyway?');
+        const proceed = window.confirm(`Warning: This ${file.type.startsWith('image/') ? 'Image' : 'PDF'} is larger than 75KB. Airtable text fields may truncate it, causing it to break when viewing. Try to use a smaller file or compress it. Proceed anyway?`);
         if (!proceed) {
           e.target.value = '';
           return;
@@ -511,14 +512,15 @@ const DimondTennisApp = () => {
   const handleReceiptFileChange = (index, e) => {
     const file = e.target.files[0];
     if (file) {
-      if (file.type !== 'application/pdf') {
-        alert('Please select a PDF file');
+      const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+      if (!allowedTypes.includes(file.type)) {
+        alert('Please select a PDF or Image file (JPG, PNG, GIF)');
         e.target.value = '';
         return;
       }
 
       if (file.size > 75 * 1024) { // 75KB limit for Airtable Text Fields
-        const proceed = window.confirm('Warning: This PDF is larger than 75KB. Airtable text fields may truncate it, causing a blank page when viewing. Try to use a smaller PDF or compress it. Proceed anyway?');
+        const proceed = window.confirm(`Warning: This ${file.type.startsWith('image/') ? 'Image' : 'PDF'} is larger than 75KB. Airtable text fields may truncate it, causing it to break when viewing. Try to use a smaller file or compress it. Proceed anyway?`);
         if (!proceed) {
           e.target.value = '';
           return;
@@ -1229,12 +1231,20 @@ const DimondTennisApp = () => {
               <X className="h-6 w-6" />
             </button>
           </div>
-          <div className="flex-1 bg-gray-100">
-            <iframe
-              src={viewingPdf.data}
-              className="w-full h-full border-none"
-              title="PDF Viewer"
-            />
+          <div className="flex-1 bg-gray-100 flex items-center justify-center overflow-auto p-4">
+            {viewingPdf.data && (viewingPdf.data.startsWith('data:image/') || viewingPdf.data.match(/\.(jpg|jpeg|png|gif|webp)$/i)) ? (
+              <img
+                src={viewingPdf.data}
+                alt="Receipt"
+                className="max-w-full max-h-full object-contain shadow-lg"
+              />
+            ) : (
+              <iframe
+                src={viewingPdf.data}
+                className="w-full h-full border-none"
+                title="Receipt Viewer"
+              />
+            )}
           </div>
           <div className="bg-gray-50 p-3 rounded-b-lg border-t text-center">
             <button
@@ -1267,20 +1277,20 @@ const DimondTennisApp = () => {
 
           <div className="p-6">
             <p className="text-sm text-gray-600 mb-6">
-              Upload PDF receipts for the courts reserved for this match.
+              Upload PDF or Image receipts for the courts reserved for this match.
             </p>
 
             <div className="space-y-6">
               {[...Array(receiptsModal.courts)].map((_, i) => (
                 <div key={i} className="border-b border-gray-100 pb-4 last:border-0 last:pb-0">
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Court {i + 1} Receipt (PDF)
+                    Court {i + 1} Receipt (PDF/Image)
                   </label>
                   <div className="flex items-center space-x-3">
                     <div className="flex-1">
                       <input
                         type="file"
-                        accept=".pdf"
+                        accept=".pdf,image/*"
                         onChange={(e) => handleReceiptFileChange(i, e)}
                         className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-black file:text-white hover:file:bg-gray-800"
                       />
@@ -1805,19 +1815,19 @@ const DimondTennisApp = () => {
                 <div className="pt-4 border-t border-gray-100">
                   <h4 className="text-sm font-semibold text-gray-900 mb-3 flex items-center">
                     <Upload className="h-4 w-4 mr-2" />
-                    Upload PDF Receipts
+                    Upload PDF or Image Receipts
                   </h4>
                   <div className="space-y-4">
                     {[...Array(newMatch.courts)].map((_, i) => (
                       <div key={i}>
                         <label className="block text-xs font-medium text-gray-500 mb-1 uppercase tracking-wider">
-                          Court {i + 1} Receipt (PDF)
+                          Court {i + 1} Receipt (PDF/Image)
                         </label>
                         <div className="flex items-center space-x-2">
                           <div className="relative flex-1">
                             <input
                               type="file"
-                              accept=".pdf"
+                              accept=".pdf,image/*"
                               onChange={(e) => handleFileChange(i, e)}
                               className="w-full text-xs text-gray-500 file:mr-4 file:py-2 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-black file:text-white hover:file:bg-gray-800"
                             />
