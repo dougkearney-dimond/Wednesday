@@ -144,34 +144,38 @@ const DimondTennisApp = () => {
   };
 
   const compressImage = (base64Str) => {
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
       const img = new Image();
       img.src = base64Str;
       img.onload = () => {
-        const canvas = document.createElement('canvas');
-        let width = img.width;
-        let height = img.height;
-        const maxDimension = 1200;
+        try {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+          const maxDimension = 1200;
 
-        if (width > height) {
-          if (width > maxDimension) {
-            height *= maxDimension / width;
-            width = maxDimension;
+          if (width > height) {
+            if (width > maxDimension) {
+              height *= maxDimension / width;
+              width = maxDimension;
+            }
+          } else {
+            if (height > maxDimension) {
+              width *= maxDimension / height;
+              height = maxDimension;
+            }
           }
-        } else {
-          if (height > maxDimension) {
-            width *= maxDimension / height;
-            height = maxDimension;
-          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+          resolve(canvas.toDataURL('image/jpeg', 0.6));
+        } catch (err) {
+          reject(err);
         }
-
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, width, height);
-        // Using lower quality (0.6) to ensure we stay under Airtable's 100k character limit
-        resolve(canvas.toDataURL('image/jpeg', 0.6));
       };
+      img.onerror = () => reject(new Error('Image failed to load for compression'));
     });
   };
 
@@ -359,27 +363,33 @@ const DimondTennisApp = () => {
 
       const reader = new FileReader();
       reader.onload = async (event) => {
-        let finalData = event.target.result;
+        try {
+          let finalData = event.target.result;
 
-        // Auto-compress images to stay under Airtable string limits
-        if (file.type.startsWith('image/')) {
-          finalData = await compressImage(finalData);
-        } else if (file.size > 75 * 1024) {
-          // Warning for PDFs/Others
-          const proceed = window.confirm(`This PDF is ${Math.round(file.size / 1024)}KB. Airtable text fields have a 100,000 character limit. If this PDF is too large, it will be truncated and appear blank. Continue?`);
-          if (!proceed) {
-            e.target.value = '';
-            return;
+          // Auto-compress images to stay under Airtable string limits
+          if (file.type.startsWith('image/')) {
+            finalData = await compressImage(finalData);
+          } else if (file.size > 75 * 1024) {
+            // Warning for PDFs/Others
+            const proceed = window.confirm(`This PDF is ${Math.round(file.size / 1024)}KB. Airtable text fields have a 100,000 character limit. If this PDF is too large, it will be truncated and appear blank. Continue?`);
+            if (!proceed) {
+              e.target.value = '';
+              return;
+            }
           }
-        }
 
-        setNewMatch(prev => {
-          const newReceipts = [...prev.receipts];
-          const newNames = [...prev.receiptNames];
-          newReceipts[index] = finalData;
-          newNames[index] = file.name;
-          return { ...prev, receipts: newReceipts, receiptNames: newNames };
-        });
+          setNewMatch(prev => {
+            const newReceipts = [...(prev.receipts || ['', ''])];
+            const newNames = [...(prev.receiptNames || ['', ''])];
+            newReceipts[index] = finalData;
+            newNames[index] = file.name;
+            return { ...prev, receipts: newReceipts, receiptNames: newNames };
+          });
+        } catch (err) {
+          console.error('Error processing upload:', err);
+          alert('Error processing file. Please try again with a different file.');
+          e.target.value = '';
+        }
       };
       reader.readAsDataURL(file);
     }
@@ -579,26 +589,32 @@ const DimondTennisApp = () => {
 
       const reader = new FileReader();
       reader.onload = async (event) => {
-        let finalData = event.target.result;
+        try {
+          let finalData = event.target.result;
 
-        // Auto-compress images
-        if (file.type.startsWith('image/')) {
-          finalData = await compressImage(finalData);
-        } else if (file.size > 75 * 1024) {
-          const proceed = window.confirm(`This PDF is ${Math.round(file.size / 1024)}KB. Airtable text fields have a 100,000 character limit. If it's too large, it will break. Continue?`);
-          if (!proceed) {
-            e.target.value = '';
-            return;
+          // Auto-compress images
+          if (file.type.startsWith('image/')) {
+            finalData = await compressImage(finalData);
+          } else if (file.size > 75 * 1024) {
+            const proceed = window.confirm(`This PDF is ${Math.round(file.size / 1024)}KB. Airtable text fields have a 100,000 character limit. If it's too large, it will break. Continue?`);
+            if (!proceed) {
+              e.target.value = '';
+              return;
+            }
           }
-        }
 
-        setReceiptsModal(prev => {
-          const newReceipts = [...prev.receipts];
-          const newNames = [...prev.receiptNames];
-          newReceipts[index] = finalData;
-          newNames[index] = file.name;
-          return { ...prev, receipts: newReceipts, receiptNames: newNames };
-        });
+          setReceiptsModal(prev => {
+            const newReceipts = [...(prev.receipts || ['', ''])];
+            const newNames = [...(prev.receiptNames || ['', ''])];
+            newReceipts[index] = finalData;
+            newNames[index] = file.name;
+            return { ...prev, receipts: newReceipts, receiptNames: newNames };
+          });
+        } catch (err) {
+          console.error('Error processing receipt:', err);
+          alert('Error processing file. Please try again.');
+          e.target.value = '';
+        }
       };
       reader.readAsDataURL(file);
     }
@@ -1413,14 +1429,15 @@ const DimondTennisApp = () => {
                     {receiptsModal.receipts[i] && (
                       <div className="flex flex-col items-center space-y-1">
                         <FileText className="h-6 w-6 text-green-600" title="File ready to upload" />
-                        <span className="text-[10px] text-green-600 font-medium">
-                          {receiptsModal.receipts[i].length >= 99000 ? '⚠️ Too Big' : (receiptsModal.receipts[i].startsWith('http') ? 'Stored' : 'New')}
+                        <span className="text-[10px] text-green-600 font-medium text-center">
+                          {(receiptsModal.receipts[i]?.length || 0) >= 99000 ? '⚠️ Too Big' : ((receiptsModal.receipts[i]?.startsWith('http') || false) ? 'Stored' : 'New')}
                         </span>
                         <button
+                          type="button"
                           onClick={() => {
                             setReceiptsModal(prev => {
-                              const newRecs = [...prev.receipts];
-                              const newNames = [...prev.receiptNames];
+                              const newRecs = [...(prev.receipts || ['', ''])];
+                              const newNames = [...(prev.receiptNames || ['', ''])];
                               newRecs[i] = '';
                               newNames[i] = '';
                               return { ...prev, receipts: newRecs, receiptNames: newNames };
@@ -1965,10 +1982,11 @@ const DimondTennisApp = () => {
                                 </span>
                               )}
                               <button
+                                type="button"
                                 onClick={() => {
                                   setNewMatch(prev => {
-                                    const newRecs = [...prev.receipts];
-                                    const newNames = [...prev.receiptNames];
+                                    const newRecs = [...(prev.receipts || ['', ''])];
+                                    const newNames = [...(prev.receiptNames || ['', ''])];
                                     newRecs[i] = '';
                                     newNames[i] = '';
                                     return { ...prev, receipts: newRecs, receiptNames: newNames };
