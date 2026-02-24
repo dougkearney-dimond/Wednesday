@@ -143,6 +143,38 @@ const DimondTennisApp = () => {
     });
   };
 
+  const compressImage = (base64Str) => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.src = base64Str;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+        const maxDimension = 1200;
+
+        if (width > height) {
+          if (width > maxDimension) {
+            height *= maxDimension / width;
+            width = maxDimension;
+          }
+        } else {
+          if (height > maxDimension) {
+            width *= maxDimension / height;
+            height = maxDimension;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+        // Using lower quality (0.6) to ensure we stay under Airtable's 100k character limit
+        resolve(canvas.toDataURL('image/jpeg', 0.6));
+      };
+    });
+  };
+
   // Check if a match should be archived (day after it occurred)
   // Check if a match should be archived (day after it occurred)
   const shouldArchiveMatch = (matchDate) => {
@@ -319,21 +351,32 @@ const DimondTennisApp = () => {
         return;
       }
 
-      if (file.size > 75 * 1024) { // 75KB limit for Airtable Text Fields
-        const proceed = window.confirm(`Warning: This ${file.type.startsWith('image/') ? 'Image' : 'PDF'} is larger than 75KB. Airtable text fields may truncate it, causing it to break when viewing. Try to use a smaller file or compress it. Proceed anyway?`);
-        if (!proceed) {
-          e.target.value = '';
-          return;
-        }
+      if (file.size > 5 * 1024 * 1024) { // 5MB total limit for selection
+        alert('File is too large. Please select a file under 5MB.');
+        e.target.value = '';
+        return;
       }
 
       const reader = new FileReader();
-      reader.onload = (event) => {
-        const base64String = event.target.result;
+      reader.onload = async (event) => {
+        let finalData = event.target.result;
+
+        // Auto-compress images to stay under Airtable string limits
+        if (file.type.startsWith('image/')) {
+          finalData = await compressImage(finalData);
+        } else if (file.size > 75 * 1024) {
+          // Warning for PDFs/Others
+          const proceed = window.confirm(`This PDF is ${Math.round(file.size / 1024)}KB. Airtable text fields have a 100,000 character limit. If this PDF is too large, it will be truncated and appear blank. Continue?`);
+          if (!proceed) {
+            e.target.value = '';
+            return;
+          }
+        }
+
         setNewMatch(prev => {
           const newReceipts = [...prev.receipts];
           const newNames = [...prev.receiptNames];
-          newReceipts[index] = base64String;
+          newReceipts[index] = finalData;
           newNames[index] = file.name;
           return { ...prev, receipts: newReceipts, receiptNames: newNames };
         });
@@ -528,21 +571,31 @@ const DimondTennisApp = () => {
         return;
       }
 
-      if (file.size > 75 * 1024) { // 75KB limit for Airtable Text Fields
-        const proceed = window.confirm(`Warning: This ${file.type.startsWith('image/') ? 'Image' : 'PDF'} is larger than 75KB. Airtable text fields may truncate it, causing it to break when viewing. Try to use a smaller file or compress it. Proceed anyway?`);
-        if (!proceed) {
-          e.target.value = '';
-          return;
-        }
+      if (file.size > 5 * 1024 * 1024) { // 5MB limit
+        alert('File is too large. Please select a file under 5MB.');
+        e.target.value = '';
+        return;
       }
 
       const reader = new FileReader();
-      reader.onload = (event) => {
-        const base64String = event.target.result;
+      reader.onload = async (event) => {
+        let finalData = event.target.result;
+
+        // Auto-compress images
+        if (file.type.startsWith('image/')) {
+          finalData = await compressImage(finalData);
+        } else if (file.size > 75 * 1024) {
+          const proceed = window.confirm(`This PDF is ${Math.round(file.size / 1024)}KB. Airtable text fields have a 100,000 character limit. If it's too large, it will break. Continue?`);
+          if (!proceed) {
+            e.target.value = '';
+            return;
+          }
+        }
+
         setReceiptsModal(prev => {
           const newReceipts = [...prev.receipts];
           const newNames = [...prev.receiptNames];
-          newReceipts[index] = base64String;
+          newReceipts[index] = finalData;
           newNames[index] = file.name;
           return { ...prev, receipts: newReceipts, receiptNames: newNames };
         });
