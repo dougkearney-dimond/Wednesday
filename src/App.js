@@ -88,28 +88,37 @@ const DimondTennisApp = () => {
   const viewReceipt = async (receiptData, title = 'Court Receipt') => {
     if (!receiptData) return;
 
+    // Detection for Airtable truncation (100k limit)
+    const isTruncated = typeof receiptData === 'string' && receiptData.length >= 99000;
+
     try {
       let finalUrl = receiptData;
+      let isBlob = false;
 
-      // If it's a Data URL, we still use a Blob for better iframe reliability
       if (receiptData.startsWith('data:')) {
         const response = await fetch(receiptData);
         const blob = await response.blob();
         finalUrl = URL.createObjectURL(blob);
+        isBlob = true;
       }
 
       setViewingPdf({
         isOpen: true,
         data: finalUrl,
-        title: title
+        title: title,
+        originalData: receiptData,
+        isTruncated: isTruncated,
+        isBlob: isBlob
       });
     } catch (error) {
       console.error('Error preparing PDF viewer:', error);
-      // Fallback: stay with original data or alert
       setViewingPdf({
         isOpen: true,
         data: receiptData,
-        title: title
+        title: title,
+        originalData: receiptData,
+        isTruncated: isTruncated,
+        isBlob: false
       });
     }
   };
@@ -1219,37 +1228,90 @@ const DimondTennisApp = () => {
   const PdfViewerModal = () => {
     if (!viewingPdf.isOpen) return null;
 
+    const closeViewer = () => {
+      // Clean up Blob URLs to prevent memory leaks
+      if (viewingPdf.isBlob && viewingPdf.data && viewingPdf.data.startsWith('blob:')) {
+        URL.revokeObjectURL(viewingPdf.data);
+      }
+      setViewingPdf({ isOpen: false, data: null, title: '' });
+    };
+
     return (
       <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-[60] p-4">
         <div className="bg-white rounded-lg shadow-2xl w-full max-w-5xl h-[90vh] flex flex-col">
           <div className="bg-gray-800 text-white p-4 rounded-t-lg flex items-center justify-between">
-            <h3 className="font-semibold truncate pr-4">{viewingPdf.title || 'Court Receipt'}</h3>
+            <div className="flex flex-col truncate">
+              <h3 className="font-semibold truncate pr-4">{viewingPdf.title || 'Court Receipt'}</h3>
+              {viewingPdf.isTruncated && (
+                <span className="text-red-400 text-[10px] font-bold uppercase animate-pulse">
+                  ⚠️ Error: This file was truncated by Airtable (too large)
+                </span>
+              )}
+            </div>
             <button
-              onClick={() => setViewingPdf({ isOpen: false, data: null, title: '' })}
+              onClick={closeViewer}
               className="text-gray-400 hover:text-white transition-colors"
             >
               <X className="h-6 w-6" />
             </button>
           </div>
-          <div className="flex-1 bg-gray-100 flex items-center justify-center overflow-auto p-4">
-            {viewingPdf.data && (viewingPdf.data.startsWith('data:image/') || viewingPdf.data.match(/\.(jpg|jpeg|png|gif|webp)$/i)) ? (
-              <img
-                src={viewingPdf.data}
-                alt="Receipt"
-                className="max-w-full max-h-full object-contain shadow-lg"
-              />
+
+          <div className="flex-1 bg-gray-100 flex flex-col items-center justify-center overflow-hidden relative">
+            {viewingPdf.isTruncated ? (
+              <div className="text-center p-8 max-w-md bg-white rounded-lg shadow-sm border border-red-100">
+                <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+                <h4 className="text-lg font-bold text-gray-900 mb-2">Blank Page?</h4>
+                <p className="text-sm text-gray-600 mb-4">
+                  This file is too large for the database. Airtable has cut off the end of the file data, making it impossible to display.
+                </p>
+                <div className="bg-red-50 p-3 rounded text-left text-xs text-red-800 mb-6">
+                  <strong>How to fix:</strong> Post a new version of this receipt that is a smaller file (under 75KB). Try taking a screenshot instead of saving a full PDF.
+                </div>
+                <button
+                  onClick={closeViewer}
+                  className="w-full bg-gray-800 text-white py-2 rounded font-medium hover:bg-gray-700"
+                >
+                  Close and Try Smaller File
+                </button>
+              </div>
             ) : (
-              <iframe
-                src={viewingPdf.data}
-                className="w-full h-full border-none"
-                title="Receipt Viewer"
-              />
+              <div className="w-full h-full flex flex-col">
+                <div className="flex-1 flex items-center justify-center p-4 overflow-auto">
+                  {viewingPdf.data && (viewingPdf.data.startsWith('data:image/') || (viewingPdf.isBlob && viewingPdf.originalData && viewingPdf.originalData.startsWith('data:image/'))) ? (
+                    <img
+                      src={viewingPdf.data}
+                      alt="Receipt"
+                      className="max-w-full max-h-full object-contain shadow-lg bg-white"
+                    />
+                  ) : (
+                    <iframe
+                      src={viewingPdf.data}
+                      className="w-full h-full border-none bg-white rounded shadow-inner"
+                      title="Receipt Viewer"
+                    />
+                  )}
+                </div>
+
+                <div className="bg-white border-t p-3 flex justify-center space-x-4 shrink-0">
+                  <a
+                    href={viewingPdf.data}
+                    download={`receipt-${viewingPdf.title.replace(/\s+/g, '-').toLowerCase()}.pdf`}
+                    className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm font-medium transition-colors"
+                  >
+                    <Download className="h-4 w-4 mr-2" />
+                    Download / Open Separately
+                  </a>
+                  <p className="text-[10px] text-gray-400 max-w-[200px] leading-tight flex items-center">
+                    If the preview is blank, try the Download button to open in your system viewer.
+                  </p>
+                </div>
+              </div>
             )}
           </div>
           <div className="bg-gray-50 p-3 rounded-b-lg border-t text-center">
             <button
-              onClick={() => setViewingPdf({ isOpen: false, data: null, title: '' })}
-              className="bg-gray-800 text-white px-6 py-2 rounded-md hover:bg-gray-700 font-medium"
+              onClick={closeViewer}
+              className="bg-gray-800 text-white px-8 py-2 rounded-md hover:bg-gray-700 font-medium transition-colors"
             >
               Close Viewer
             </button>
@@ -1296,16 +1358,25 @@ const DimondTennisApp = () => {
                       />
                     </div>
                     {receiptsModal.receipts[i] && (
-                      <div className="flex flex-col items-center">
+                      <div className="flex flex-col items-center space-y-1">
                         <FileText className="h-6 w-6 text-green-600" title="File ready to upload" />
                         <span className="text-[10px] text-green-600 font-medium">
-                          {receiptsModal.receipts[i].startsWith('http') ? 'Stored' : 'New'}
+                          {receiptsModal.receipts[i].length >= 99000 ? '⚠️ Too Big' : (receiptsModal.receipts[i].startsWith('http') ? 'Stored' : 'New')}
                         </span>
-                        {receiptsModal.receiptNames[i] && (
-                          <span className="text-[8px] text-gray-400 truncate max-w-[60px]">
-                            {receiptsModal.receiptNames[i]}
-                          </span>
-                        )}
+                        <button
+                          onClick={() => {
+                            setReceiptsModal(prev => {
+                              const newRecs = [...prev.receipts];
+                              const newNames = [...prev.receiptNames];
+                              newRecs[i] = '';
+                              newNames[i] = '';
+                              return { ...prev, receipts: newRecs, receiptNames: newNames };
+                            });
+                          }}
+                          className="text-[10px] text-red-500 hover:text-red-700 underline"
+                        >
+                          Clear
+                        </button>
                       </div>
                     )}
                   </div>
@@ -1840,6 +1911,20 @@ const DimondTennisApp = () => {
                                   {newMatch.receiptNames[i]}
                                 </span>
                               )}
+                              <button
+                                onClick={() => {
+                                  setNewMatch(prev => {
+                                    const newRecs = [...prev.receipts];
+                                    const newNames = [...prev.receiptNames];
+                                    newRecs[i] = '';
+                                    newNames[i] = '';
+                                    return { ...prev, receipts: newRecs, receiptNames: newNames };
+                                  });
+                                }}
+                                className="text-[10px] text-red-500 hover:text-red-700 underline mt-1"
+                              >
+                                Clear
+                              </button>
                             </div>
                           )}
                         </div>
